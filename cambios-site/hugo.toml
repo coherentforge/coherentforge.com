@@ -1,0 +1,52 @@
+baseURL = 'https://coherentforge.com/cambios'
+languageCode = 'en-us'
+title = 'CambiOS'
+theme = ''
+
+[params]
+  description = 'A secure bridge from human consciousness to the electron.'
+  tagline = 'Your computer is not your own. We are changing that.'
+  repo = 'https://github.com/coherentforge/cambios'
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.highlight]
+    style = 'monokai'
+    lineNos = false
+    guessSyntax = true
+
+[menu]
+  [[menu.main]]
+    name = 'Overview'
+    url = '/'
+    weight = 1
+  [[menu.main]]
+    name = 'Architecture'
+    url = '/docs/architecture/'
+    weight = 2
+  [[menu.main]]
+    name = 'Security'
+    url = '/docs/security/'
+    weight = 3
+  [[menu.main]]
+    name = 'Status'
+    url = '/docs/status/'
+    weight = 4
+  [[menu.main]]
+    name = 'ADRs'
+    url = '/adr/'
+    weight = 5
+  [[menu.main]]
+    name = 'Manuals'
+    url = '/manuals/'
+    weight = 6
+  [[menu.main]]
+    name = 'Philosophy'
+    url = '/docs/philosophy/'
+    weight = 7
+  [[menu.main]]
+    name = 'Governance'
+    url = '/docs/governance/'
+    weight = 8

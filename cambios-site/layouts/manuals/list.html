@@ -1,0 +1,16 @@
+{{ define "main" }}
+<div class="page-wrap">
+  <div class="page-content">
+    <h1>Manuals</h1>
+    <p class="section-intro">Narrative walkthroughs that explain how CambiOS works by following real things through the system. Not API references — stories about what happens when the kernel boots, when a message crosses a trust boundary, when a signature is verified.</p>
+    <div class="manual-list">
+      {{ range .Pages }}
+      <a href="{{ .Permalink }}" class="manual-card">
+        <h3>{{ .Title }}</h3>
+        {{ with .Params.summary }}<p>{{ . }}</p>{{ end }}
+      </a>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{ end }}

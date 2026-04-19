@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coherent Forge</title>
+<meta name="description" content="Intentional infrastructure. Art, technology, stewardship, and wisdom — forged with clarity and integrity.">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="26" font-size="24">◆</text></svg>'>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ─── tokens ─── */
+:root {
+  --bg: #faf7f2;
+  --bg-warm: #f3ede4;
+  --bg-deep: #1c1a17;
+  --fg: #2a2520;
+  --fg-mid: #5c554d;
+  --fg-soft: #8a8279;
+  --ember: #c4582a;
+  --ember-light: #d4714a;
+  --ember-glow: rgba(196, 88, 42, 0.08);
+  --iron: #3d3833;
+  --brass: #a68b5b;
+  --border: #ddd6cb;
+  --border-light: #e8e2d8;
+
+  --serif: 'Cormorant Garamond', 'Georgia', serif;
+  --sans: 'DM Sans', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+/* ─── reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 17px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--sans);
+  color: var(--fg);
+  background: var(--bg);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+::selection { background: var(--ember); color: var(--bg); }
+
+/* ─── grain overlay ─── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ─── animations ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes lineGrow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.reveal {
+  opacity: 0;
+  animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.reveal-1 { animation-delay: 0.1s; }
+.reveal-2 { animation-delay: 0.25s; }
+.reveal-3 { animation-delay: 0.4s; }
+.reveal-4 { animation-delay: 0.55s; }
+.reveal-5 { animation-delay: 0.7s; }
+.reveal-6 { animation-delay: 0.85s; }
+
+/* ─── layout ─── */
+.page { max-width: 64rem; margin: 0 auto; padding: 0 2rem; }
+
+/* ─── header ─── */
+header {
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.wordmark {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.25rem;
+  color: var(--fg);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+header nav a {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--fg-soft);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.35rem 0.65rem;
+  border-radius: 3px;
+  transition: color 0.3s, background 0.3s;
+}
+header nav a:hover { color: var(--fg); background: var(--bg-warm); }
+
+/* ─── hero ─── */
+.hero {
+  padding: 8rem 0 6rem;
+  position: relative;
+}
+
+/* subtle radial warmth */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -4rem;
+  right: -8rem;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--ember-glow) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  max-width: 16ch;
+  margin-bottom: 2.5rem;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--ember);
+}
+
+.hero-line {
+  width: 4rem;
+  height: 2px;
+  background: var(--ember);
+  margin-bottom: 2rem;
+  transform-origin: left;
+  animation: lineGrow 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
+}
+
+.hero-body {
+  font-size: 1.15rem;
+  line-height: 1.7;
+  color: var(--fg-mid);
+  max-width: 36rem;
+}
+
+/* ─── divider ─── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 5rem 0;
+}
+
+/* ─── ethos section ─── */
+.ethos {
+  padding: 0 0 4rem;
+}
+
+.ethos-header {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-soft);
+  margin-bottom: 2.5rem;
+}
+
+.ethos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2.5rem 3.5rem;
+}
+
+.ethos-item h3 {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--fg);
+  margin-bottom: 0.5rem;
+}
+
+.ethos-item p {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--fg-mid);
+}
+
+@media (max-width: 640px) {
+  .ethos-grid { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+/* ─── work section ─── */
+.work {
+  padding: 0 0 5rem;
+}
+
+.work-header {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-soft);
+  margin-bottom: 2.5rem;
+}
+
+.work-card {
+  display: block;
+  background: var(--bg-warm);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 2.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.4s, box-shadow 0.4s, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.work-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--ember);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.work-card:hover {
+  border-color: var(--border);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(44, 38, 32, 0.06);
+}
+
+.work-card:hover::before { transform: scaleY(1); }
+
+.work-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.work-card h3 {
+  font-family: var(--serif);
+  font-size: 1.75rem;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.work-tag {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ember);
+  background: var(--ember-glow);
+  padding: 0.25rem 0.6rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 0.35rem;
+}
+
+.work-card p {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--fg-mid);
+  max-width: 48rem;
+}
+
+.work-card .arrow {
+  display: inline-block;
+  margin-left: 0.35rem;
+  transition: transform 0.3s;
+  color: var(--ember);
+}
+.work-card:hover .arrow { transform: translateX(4px); }
+
+/* ─── upcoming / future ─── */
+.upcoming {
+  padding: 0 0 5rem;
+}
+
+.upcoming-header {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-soft);
+  margin-bottom: 1.5rem;
+}
+
+.upcoming-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.upcoming-item {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--fg-mid);
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+}
+
+/* ─── quote / closing ─── */
+.closing {
+  padding: 4rem 0 6rem;
+  border-top: 1px solid var(--border);
+}
+
+.closing-quote {
+  font-family: var(--serif);
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--fg);
+  max-width: 32ch;
+  margin-bottom: 1.5rem;
+}
+
+.closing-attr {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--fg-soft);
+  letter-spacing: 0.04em;
+}
+
+/* ─── footer ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem 0 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+footer span {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--fg-soft);
+  letter-spacing: 0.02em;
+}
+
+footer a {
+  color: var(--fg-soft);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+footer a:hover { color: var(--ember); }
+
+/* ─── responsive ─── */
+@media (max-width: 640px) {
+  .page { padding: 0 1.25rem; }
+  .hero { padding: 5rem 0 3rem; }
+  header { padding: 1.25rem; }
+  .work-card { padding: 1.5rem; }
+  .work-card-top { flex-direction: column; gap: 0.5rem; }
+  footer { flex-direction: column; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="wordmark">Coherent Forge</a>
+  <nav>
+    <a href="/cambios">CambiOS</a>
+  </nav>
+</header>
+
+<div class="page">
+
+  <section class="hero">
+    <h1 class="hero-title reveal reveal-1">Forging <em>coherent</em> infrastructure.</h1>
+    <div class="hero-line"></div>
+    <p class="hero-body reveal reveal-2">
+      Art, technology, stewardship, and wisdom — shaped with clarity and integrity. 
+      Coherent Forge builds intentional systems: digital infrastructure that serves people, 
+      not the other way around. We work at the intersection of craft and conscience, 
+      creating tools and frameworks that hold up under scrutiny and earn trust by design.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <section class="ethos reveal reveal-3">
+    <div class="ethos-header">What we hold</div>
+    <div class="ethos-grid">
+      <div class="ethos-item">
+        <h3>Craftsmanship</h3>
+        <p>Every system we build carries the weight of its decisions visibly. No hidden trade-offs. No shortcuts dressed up as features. The work earns its complexity or sheds it.</p>
+      </div>
+      <div class="ethos-item">
+        <h3>Transformation</h3>
+        <p>A forge changes the nature of what enters it. We don't optimize what's broken — we re-examine what's assumed. The best infrastructure starts from honest foundations.</p>
+      </div>
+      <div class="ethos-item">
+        <h3>Stewardship</h3>
+        <p>Building for the people who use the thing, not the people who sell it. User sovereignty isn't a marketing line. It's an architectural constraint that shapes every decision.</p>
+      </div>
+      <div class="ethos-item">
+        <h3>Coherence</h3>
+        <p>Clarity that runs all the way through — from the documentation to the design to the byte on disk. If it can't be explained plainly, it hasn't been understood well enough to build.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="work reveal reveal-4">
+    <div class="work-header">Active work</div>
+
+    <a href="/cambios" class="work-card">
+      <div class="work-card-top">
+        <h3>CambiOS</h3>
+        <span class="work-tag">In development</span>
+      </div>
+      <p>
+        A ground-up operating system — microkernel in Rust, capability-based security, 
+        cryptographic identity, zero-trust IPC. No telemetry. No backdoors. 
+        Boots on x86_64, AArch64, and RISC-V (in progress). 447 tests passing. 
+        Built to prove that the fundamental architecture of computing can be replaced, 
+        not just patched. <span class="arrow">→</span>
+      </p>
+    </a>
+  </section>
+
+  <section class="upcoming reveal reveal-5">
+    <div class="upcoming-header">Forming</div>
+    <div class="upcoming-list">
+      <div class="upcoming-item">Sovereign silicon</div>
+      <div class="upcoming-item">Open hardware</div>
+      <div class="upcoming-item">Civic infrastructure</div>
+      <div class="upcoming-item">Identity without platforms</div>
+    </div>
+  </section>
+
+  <section class="closing reveal reveal-6">
+    <p class="closing-quote">"Creation outweighs destruction, or we would be nothing just by the balance."</p>
+    <span class="closing-attr">— Philosophical reflection during CambiOS development</span>
+  </section>
+
+  <footer>
+    <span>Coherent Forge</span>
+    <span><a href="mailto:jason@coherentforge.com">jason@coherentforge.com</a></span>
+  </footer>
+
+</div>
+
+</body>
+</html>

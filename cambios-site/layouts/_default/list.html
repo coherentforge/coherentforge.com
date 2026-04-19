@@ -1,0 +1,13 @@
+{{ define "main" }}
+<div class="page-wrap">
+  <div class="page-content">
+    <h1>{{ .Title }}</h1>
+    {{ .Content }}
+    {{ range .Pages }}
+    <div style="margin-bottom: var(--sp-4);">
+      <a href="{{ .Permalink }}" style="color: var(--fg-0); text-decoration: none; font-family: var(--font-mono); font-size: var(--fs-sm);">→ {{ .Title }}</a>
+    </div>
+    {{ end }}
+  </div>
+</div>
+{{ end }}

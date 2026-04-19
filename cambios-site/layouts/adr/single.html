@@ -1,0 +1,12 @@
+{{ define "main" }}
+<div class="page-wrap">
+  <div class="page-content">
+    <h1>ADR-{{ .Params.adr_num }}: {{ .Title }}</h1>
+    <div class="status-bar" style="margin-bottom: var(--sp-8);">
+      <div class="status-item"><span class="status-dot {{ if eq .Params.status "Accepted" }}green{{ else }}yellow{{ end }}"></span> {{ .Params.status }}</div>
+      {{ with .Params.date_proposed }}<div class="status-item">{{ . }}</div>{{ end }}
+    </div>
+    {{ .Content }}
+  </div>
+</div>
+{{ end }}

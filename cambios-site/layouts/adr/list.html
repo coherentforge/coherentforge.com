@@ -1,0 +1,17 @@
+{{ define "main" }}
+<div class="page-wrap">
+  <div class="page-content">
+    <h1>Architecture Decision Records</h1>
+    <p class="section-intro">Each ADR captures a significant design decision — the context, the options considered, the decision made, and the rationale. They are the project's architectural memory.</p>
+    <ul class="adr-list">
+      {{ range .Pages }}
+      <li class="adr-item">
+        <span class="adr-num">{{ .Params.adr_num }}</span>
+        <span class="adr-title"><a href="{{ .Permalink }}">{{ .Title }}</a></span>
+        <span class="adr-status {{ lower .Params.status }}">{{ .Params.status }}</span>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+</div>
+{{ end }}

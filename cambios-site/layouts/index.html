@@ -1,0 +1,84 @@
+{{ define "main" }}
+<section class="hero">
+  <div class="hero-content">
+    <h1>A secure bridge from<br>human consciousness<br>to the <span class="accent">electron</span>.</h1>
+    <p class="hero-sub">CambiOS is a ground-up operating system — microkernel, memory-safe, cryptographic identity, zero-trust everything. No telemetry. No backdoors. Your machine is yours.</p>
+    <div class="hero-quote">Your computer is not your own. Before your OS boots, before your kernel loads — a separate processor with its own OS, network stack, and private keys is already running. You didn't install it, and you can't turn it off.</div>
+
+    <div class="status-bar">
+      <div class="status-item"><span class="status-dot green"></span> 447 tests passing</div>
+      <div class="status-item"><span class="status-dot green"></span> x86_64 boots in QEMU</div>
+      <div class="status-item"><span class="status-dot green"></span> AArch64 boots in QEMU</div>
+      <div class="status-item"><span class="status-dot yellow"></span> RISC-V in progress</div>
+      <div class="status-item"><span class="status-dot blue"></span> Bare-metal tooling ready</div>
+    </div>
+
+    <div class="pill-grid">
+      <div class="pill">
+        <div class="pill-label">Kernel</div>
+        <div class="pill-value">Microkernel in Rust (no_std). Five jobs: scheduling, memory, IPC, capabilities, interrupts. Everything else is user-space.</div>
+      </div>
+      <div class="pill">
+        <div class="pill-label">Security</div>
+        <div class="pill-value">Capability-based IPC. Zero-trust interceptor. Signed ELF loading. W^X enforcement. Every message carries unforgeable sender identity.</div>
+      </div>
+      <div class="pill">
+        <div class="pill-label">Identity</div>
+        <div class="pill-value">Ed25519 cryptographic identity. Hardware-backed via YubiKey. No passwords. No central authority. did:key DID method.</div>
+      </div>
+      <div class="pill">
+        <div class="pill-label">Storage</div>
+        <div class="pill-value">Content-addressed ObjectStore. Blake3 hashing. Ed25519 signatures on every object. Persistent on virtio-blk, survives reboot.</div>
+      </div>
+      <div class="pill">
+        <div class="pill-label">Networking</div>
+        <div class="pill-value">Virtio-net + Intel I219 drivers. UDP/IP stack. NTP demo. Identity-routed overlay network planned.</div>
+      </div>
+      <div class="pill">
+        <div class="pill-label">Platforms</div>
+        <div class="pill-value">x86_64 (SMP, 2 CPUs). AArch64 (SMP, GICv3). RISC-V (Sv48 paging, DTB parser, kernel heap running).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page-wrap">
+  <div class="page-content">
+    <h2>Architecture</h2>
+    <div class="arch-diagram">
++============================================================+
+|                      Applications                          |
+|  Native CambiOS apps  |  Legacy apps (Win32/POSIX compat)  |
++============================================================+
+|                    System Services                          |
+|  Shell | Compositor | Policy service | Update service       |
++============================================================+
+|                    Compatibility                            |
+|  Win32 API translation | POSIX layer | PE loader            |
++============================================================+
+|                    OS Services                              |
+|  VFS | Network stack | Audio | Graphics | Device drivers    |
++============================================================+
+|                    Core Services                            |
+|  AI Engine | Identity | Social protocol | Audit | Logging   |
++============================================================+
+|                    Microkernel                              |
+|  Scheduling | Memory | IPC | Capabilities | Interrupts      |
++============================================================+
+|                    Hardware                                 |
+|  x86_64  |  AArch64  |  RISC-V  |  (future)               |
++============================================================+</div>
+    <p>Every box above the microkernel is an isolated user-space process. Every arrow between them is a capability-checked IPC message. A buggy filesystem service can't take down the kernel. A compromised network driver can't read another process's memory. Isolation is structural, not policy.</p>
+
+    <h2>What makes this different</h2>
+    <p>This is not a research prototype and it is not a design document. CambiOS boots, schedules, runs user-space services, signs and verifies binaries, and handles IPC — with a real security model enforced at every boundary. Built by one person, in a few months of coding.</p>
+    <p>The kernel is honest about what exists and what doesn't. <a href="{{ "docs/status/" | relURL }}">STATUS.md</a> is the single source of truth. Every numeric bound in the codebase is categorized and documented in <a href="{{ "docs/assumptions/" | relURL }}">ASSUMPTIONS.md</a>. Architecture decisions are recorded in <a href="{{ "adr/" | relURL }}">ADRs</a> with full rationale and rejected alternatives.</p>
+    <p>Read the <a href="{{ "docs/architecture/" | relURL }}">architecture document</a>. Read the <a href="{{ "manuals/" | relURL }}">manuals</a> — they walk real things through the system. Read the <a href="{{ "docs/philosophy/" | relURL }}">philosophy</a> if you want to know why.</p>
+
+    <h2>Commitments</h2>
+    <p><strong>No telemetry.</strong> No analytics. No phone-home behavior. Ever. Not now, not in future versions. This is a design constraint, not a policy.</p>
+    <p><strong>No backdoors.</strong> No remote access mechanism that bypasses the capability model. No "emergency" channels. No "debug" overrides that work without the user's explicit action.</p>
+    <p><strong>Your machine is yours.</strong> No DRM. No activation. No mandatory accounts. Secure boot protects the owner from unauthorized modifications, not the vendor from the owner.</p>
+  </div>
+</section>
+{{ end }}

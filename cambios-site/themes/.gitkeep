@@ -1,0 +1,4 @@
+# Keep this empty directory tracked in git.
+# hugo.toml sets theme = '' so no theme is loaded, but the themes/ directory's
+# presence has historically avoided build edge cases. Remove this file if you
+# later add a real theme.
