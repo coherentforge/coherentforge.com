@@ -16,6 +16,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Log commit being deployed
+        run: |
+          echo "SHA:   ${{ github.sha }}"
+          echo "Event: ${{ github.event_name }}"
+          git log -1 --pretty=format:'%n  %h %s%n  %an <%ae>%n  %ad%n'
+          # workflow_dispatch locks its SHA at dispatch time. If a dispatch
+          # sits queued while main advances, it will run an old commit and
+          # may overwrite fresher content. Warn if that's happening.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MAIN_HEAD=$(git ls-remote origin refs/heads/main | cut -f1)
+            if [ "${{ github.sha }}" != "$MAIN_HEAD" ]; then
+              echo "::warning::Dispatch SHA ${{ github.sha }} is behind main HEAD $MAIN_HEAD. Likely a stale dispatch — cancel and re-trigger if you want current main."
+            fi
+          fi
+
       - name: Install Hugo
         run: |
           HUGO_VERSION=0.160.1

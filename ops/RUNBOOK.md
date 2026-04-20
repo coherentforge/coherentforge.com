@@ -65,6 +65,43 @@ rsync fails (exit 23), the script exits before the landing rsync. The
 landing page stays at whatever the droplet had before. No partial-deploy
 cleanup needed.
 
+### workflow_dispatch locks the SHA at dispatch time, not at run time
+
+**Symptom:** you push a content change, CI reports success, the live site
+still shows old content. Direct curl to the origin (bypassing Cloudflare)
+confirms the droplet is serving stale content. rsync logs show it "sent"
+bytes and claimed to write index.html.
+
+**Cause:** a `workflow_dispatch` run was triggered earlier via the UI
+(possibly while exploring), sat queued, and un-queued *after* a later push
+run completed. The dispatch's checkout resolves against its **dispatch-time
+ref**, not main HEAD at run time — so it rebuilds and deploys the old
+commit on top of the fresh one.
+
+**Observed case (2026-04-19):** a UI dispatch created at 21:33 UTC started
+at 01:07 UTC the next day on SHA `1765260` (4 hours stale). It un-queued
+~4 seconds after a push-triggered run completed at SHA `c359f41`, and
+overwrote the fresh content.
+
+**How to spot it in logs:** the "Log commit being deployed" step prints
+the SHA and commit subject. If a dispatch run shows an unexpected old
+subject line (e.g. a yesterday commit), that's the symptom. The workflow
+also emits a `::warning::` when a dispatch runs behind main HEAD.
+
+**Fixes:**
+- **Immediate:** trigger a fresh `workflow_dispatch` now, or push an empty
+  commit (`git commit --allow-empty -S -m 'redeploy'`). Either forces a
+  run against current HEAD.
+- **Hygiene:** before manually dispatching, cancel any queued dispatch runs
+  from the Actions UI (they show a "Queued" spinner). And avoid
+  dispatching unless a push won't serve the same purpose.
+
+**Why not auto-cancel queued dispatches?** The workflow uses
+`concurrency.cancel-in-progress: false` so mid-deploy runs aren't killed
+(partial rsync is worse than a re-run). The trade-off is that a queued
+dispatch *can* run after a newer push. The SHA-logging step makes this
+visible; the warning makes it diagnosable.
+
 ## First-time setup of a new droplet (record for future sites)
 
 Steps that were done once for coherentforge.com, captured here for the
