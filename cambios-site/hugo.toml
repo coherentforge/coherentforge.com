@@ -50,3 +50,7 @@ theme = ''
     name = 'Governance'
     url = '/docs/governance/'
     weight = 8
+  [[menu.main]]
+    name = 'License'
+    url = '/docs/license/'
+    weight = 9
