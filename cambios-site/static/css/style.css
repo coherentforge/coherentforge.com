@@ -201,6 +201,7 @@ nav.main-nav a.active {
   position: relative;
   z-index: 1;
   max-width: var(--content-max);
+  padding-left: var(--sp-3);
 }
 
 .hero h1 {
@@ -210,6 +211,7 @@ nav.main-nav a.active {
   line-height: var(--lh-tight);
   letter-spacing: -0.03em;
   margin-bottom: var(--sp-6);
+  margin-left: calc(var(--sp-3) * -1);
 }
 
 .hero h1 .accent { color: var(--accent); }
@@ -221,12 +223,30 @@ nav.main-nav a.active {
   margin-bottom: var(--sp-8);
 }
 
+.hero-intent {
+  font-size: var(--fs-base);
+  color: var(--fg-2);
+  max-width: 40rem;
+  margin-top: var(--sp-12);
+  line-height: var(--lh-body);
+}
+
+.hero-intent + .hero-intent {
+  margin-top: var(--sp-4);
+}
+
+.hero-intent em {
+  color: var(--fg-1);
+  font-style: italic;
+}
+
 .hero-quote {
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);
   color: var(--fg-2);
   border-left: 2px solid var(--accent);
   padding-left: var(--sp-4);
+  margin-top: var(--sp-8);
   margin-bottom: var(--sp-12);
   max-width: 38rem;
 }
