@@ -216,16 +216,9 @@ nav.main-nav a.active {
 
 .hero h1 .accent { color: var(--accent); }
 
-.hero-sub {
-  font-size: var(--fs-lg);
-  color: var(--fg-1);
-  max-width: 40rem;
-  margin-bottom: var(--sp-8);
-}
-
 .hero-intent {
   font-size: var(--fs-base);
-  color: var(--fg-2);
+  color: var(--fg-0);
   max-width: 40rem;
   margin-top: var(--sp-12);
   line-height: var(--lh-body);
@@ -236,7 +229,7 @@ nav.main-nav a.active {
 }
 
 .hero-intent em {
-  color: var(--fg-1);
+  color: var(--fg-0);
   font-style: italic;
 }
 
