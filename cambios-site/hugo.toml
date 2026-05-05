@@ -47,10 +47,6 @@ theme = ''
     url = '/docs/philosophy/'
     weight = 7
   [[menu.main]]
-    name = 'Governance'
-    url = '/docs/governance/'
+    name = 'Why Not?'
+    url = '/docs/why-not/'
     weight = 8
-  [[menu.main]]
-    name = 'License'
-    url = '/docs/license/'
-    weight = 9

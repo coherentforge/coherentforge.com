@@ -145,6 +145,19 @@ nav.main-nav a.active {
   background: var(--bg-2);
 }
 
+.header-inner > .nav-github {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-1);
+  margin-left: auto;
+  color: var(--fg-1);
+  text-decoration: none;
+  transition: color var(--dur) var(--ease-out);
+}
+.header-inner > .nav-github svg { display: block; }
+.header-inner > .nav-github:hover { color: var(--accent); }
+
 .nav-toggle {
   display: none;
   background: none;
