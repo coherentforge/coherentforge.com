@@ -1,13 +1,13 @@
 ---
 title: "Input Architecture and Device Classes"
 adr_num: "012"
-status: "Proposed"
+status: "Accepted"
 date_proposed: "2026-04-14"
-weight: 14
+weight: 12
 ---
 
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-14
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities), [ADR-003](/adr/003-content-addressed-storage/) (Principals and load-bearing identity), [ADR-005](/adr/005-ipc-primitives/) (IPC bulk path), [ADR-011](/adr/011-graphics-architecture/) (Graphics architecture)
 - **Related:** The planned *ADR-014: Peripheral and document-flow services* covers printers and scanners; they are explicitly not on this path.

@@ -1,13 +1,13 @@
 ---
 title: "IPC Primitives — Control Path and Bulk Data Path"
 adr_num: "005"
-status: "Proposed"
+status: "Accepted"
 date_proposed: "2026-04-10"
 weight: 5
 ---
 
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-10
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities), [ADR-002](/adr/002-enforcement-pipeline/) (Three-Layer Enforcement Pipeline)
 - **Supersedes:** N/A

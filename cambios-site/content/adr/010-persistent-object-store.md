@@ -1,13 +1,13 @@
 ---
 title: "Persistent ObjectStore — On-Disk Format"
 adr_num: "010a"
-status: "Proposed"
+status: "Accepted"
 date_proposed: "2026-04-14"
 weight: 10
 ---
 
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-14
 - **Depends on:** [ADR-003](/adr/003-content-addressed-storage/) (Content-Addressed Storage), [ADR-004](/adr/004-cryptographic-integrity/) (Blake3 + Ed25519)
 - **Related:** [identity.md](/docs/identity/), [FS-and-ID-design-plan.md](/docs/fs-and-id-design/), [ADR-005](/adr/005-ipc-primitives/)
@@ -163,7 +163,7 @@ Mount's record scan is a `for i in 0..capacity_slots` loop. `capacity_slots` is 
 
 ## Divergence
 
-Two things landed during Phase 4a.iii that deviate from the plan originally sketched alongside this ADR (in `/Users/jasonricca/.claude/plans/woolly-bouncing-squid.md`). Capturing them here so the ADR doesn't silently become fiction.
+Two things landed during Phase 4a.iii that deviate from the plan originally sketched alongside this ADR. Capturing them here so the ADR doesn't silently become fiction.
 
 ### 1. Plan/execute/commit decomposition not implemented
 

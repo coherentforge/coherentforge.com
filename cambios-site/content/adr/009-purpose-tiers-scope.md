@@ -1,13 +1,13 @@
 ---
 title: "Purpose, Deployment Tiers, and Scope Boundaries"
 adr_num: "009"
-status: "Proposed"
+status: "Accepted"
 date_proposed: "2026-04-11"
 weight: 9
 ---
 
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-11
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities)
 - **Related:** [CambiOS.md](/docs/architecture/), [PHILOSOPHY.md](/docs/philosophy/), [SECURITY.md](/docs/security/), [win-compat.md](/docs/win-compat/), [identity.md](/docs/identity/), [GOVERNANCE.md](/docs/governance/)

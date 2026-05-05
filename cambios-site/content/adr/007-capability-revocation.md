@@ -1,13 +1,13 @@
 ---
 title: "Capability Revocation and Audit Telemetry"
 adr_num: "007"
-status: "Proposed"
+status: "Accepted"
 date_proposed: "2026-04-10"
 weight: 7
 ---
 
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-10
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities), [ADR-002](/adr/002-enforcement-pipeline/) (Three-Layer Enforcement Pipeline)
 - **Related:** [ADR-005](/adr/005-ipc-primitives/) (IPC Primitives), [ADR-006](/adr/006-policy-service/) (Policy Service)

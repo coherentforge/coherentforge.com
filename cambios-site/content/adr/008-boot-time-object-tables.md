@@ -1,13 +1,13 @@
 ---
 title: "Boot-Time-Sized Kernel Object Tables"
 adr_num: "008"
-status: "Proposed"
+status: "Accepted"
 date_proposed: "2026-04-11"
 weight: 8
 ---
 
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-11
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities), [ADR-009](/adr/009-purpose-tiers-scope/) (Purpose, Deployment Tiers, and Scope Boundaries)
 - **Related:** [ADR-001](/adr/001-smp-scheduling/) (Lock hierarchy), [ADR-005](/adr/005-ipc-primitives/) (IPC primitives — channels are downstream consumers of this decision), [ADR-007](/adr/007-capability-revocation/) (revocation primitive wired in Wave 1)

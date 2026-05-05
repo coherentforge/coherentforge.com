@@ -1,13 +1,13 @@
 ---
 title: "Graphics Architecture and Scaling Assumptions"
 adr_num: "011"
-status: "Proposed"
+status: "Accepted"
 date_proposed: "2026-04-13"
-weight: 13
+weight: 11
 ---
 
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-13
 - **Depends on:** [ADR-005](/adr/005-ipc-primitives/) (IPC Bulk Path — Channels), [ADR-007](/adr/007-capability-revocation/) (Revocation + Telemetry), [ADR-009](/adr/009-purpose-tiers-scope/) (Deployment Tiers)
 - **Related:** [CambiOS.md](/docs/architecture/) § "Graphics and windowing runs in user-space", [PHILOSOPHY.md](/docs/philosophy/)

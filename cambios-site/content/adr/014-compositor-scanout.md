@@ -1,13 +1,13 @@
 ---
 title: "Compositor ↔ Scanout-Driver Protocol"
 adr_num: "014"
-status: "Proposed"
+status: "Accepted"
 date_proposed: "2026-04-15"
-weight: 16
+weight: 14
 ---
 
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-15
 - **Depends on:** [ADR-005](/adr/005-ipc-primitives/) (IPC channels), [ADR-011](/adr/011-graphics-architecture/) (Graphics architecture)
 - **Related:** [ADR-012](/adr/012-input-architecture/) (input flow into compositor; same modularity pattern, different transport).

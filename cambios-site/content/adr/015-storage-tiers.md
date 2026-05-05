@@ -3,7 +3,7 @@ title: "Storage Tiers and the Commitment Ladder"
 adr_num: "015"
 status: "Proposed"
 date_proposed: "2026-04-16"
-weight: 17
+weight: 15
 ---
 
 
