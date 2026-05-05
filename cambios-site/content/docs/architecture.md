@@ -6,21 +6,17 @@ url: /docs/architecture/
 
 ## What This Document Is
 
-This is the source document for CambiOS. Everything else — contributor guides, marketing copy, technical references — derives from what's written here. If a decision contradicts this document, this document wins or this document gets updated. There is no third option.
+The [homepage](/) is the sixty-second overview - what CambiOS is, what's running today, the shape of the stack. This document is the long form: principles, subsystem-by-subsystem design, the threat model, and the things we deliberately said no to. If a decision contradicts this document, this document wins or this document gets updated. There is no third option.
 
-The architectural commitments that this document carries narratively are made formal and cite-able in **ADR-009** — purpose statements, deployment tiers, hardware floors, and scope boundaries. Governance and funding commitments are in **GOVERNANCE.md**. When a future decision needs a stable reference for what CambiOS *is*, cite ADR-009. When it needs a reference for how CambiOS is *run*, cite GOVERNANCE.md.
+The architectural commitments here are made formal and cite-able in **[ADR-009](/adr/009-purpose-tiers-scope/)** — purpose statements, deployment tiers, hardware floors, and scope boundaries. Governance and funding commitments are in **[GOVERNANCE.md](/docs/governance/)**. When a future decision needs a stable reference for what CambiOS *is*, cite ADR-009. When it needs a reference for how CambiOS is *run*, cite GOVERNANCE.md.
 
 ---
 
 ## The Problem
 
-Operating systems were designed in an era when the threat model was "keep users from crashing each other's programs" and the networking model was "trust the network, authenticate at the edge." That era is over.
+Operating systems were designed in an era when the threat model was "keep users from crashing each other's programs" and the networking model was "trust the network, authenticate at the edge." That era is over. Modern OSes are layers of compromise stacked on assumptions that stopped being true decades ago - monolithic kernels running hundreds of millions of lines at the highest privilege level, security bolted on after the fact, passwords for identity, trusted infrastructure for networking, reboots for updates.
 
-Modern operating systems are layers of compromise stacked on top of assumptions that stopped being true decades ago. Monolithic kernels run hundreds of millions of lines of code at the highest privilege level. Security is bolted on after the fact — antivirus software that runs with the same privileges as the threats it's trying to stop. Identity is still passwords. Networking still assumes a trusted infrastructure layer. Updates still require reboots.
-
-Every patch is damage control. The architecture itself is the vulnerability.
-
-CambiOS starts from the position that **the only way to build a secure system is to design one**, not to retrofit security onto a system that was never designed for it.
+Under this model, every patch is damage control and the architecture itself is the vulnerability. CambiOS starts from the position that **the only way to build a secure system is to design one**. You cannot effectively retrofit robust security onto systems that were never designed for it because there are simply too many holes to cover.
 
 ---
 
@@ -28,77 +24,51 @@ CambiOS starts from the position that **the only way to build a secure system is
 
 These are non-negotiable. They constrain every design decision. When two goals conflict, these principles break the tie.
 
-### 1. Security as Architecture (Not Policy)
+### 1. Security as Architecture
 
-Security isn't a feature that gets added. We're making security a structural property of the system. Every component — the kernel, the scheduler, the IPC mechanism, the driver model, the networking stack — is designed so that compromise of any single component cannot propagate to others. This is achieved through signing (keys), isolation (IPC), verification (pre-execution analysis), and least privilege (capabilities).
+Security, as a structural property of the system, ensures the outcome meets the intent. Security isn't an added "feature" - the kernel, scheduler, IPC mechanism, driver model, and networking stack are all designed so that compromise of any single component cannot propagate to others. This is achieved through signing (keys), isolation (IPC), verification (pre-execution analysis), and least privilege (capabilities).
 
 ### 2. Minimal Kernel, Maximal Isolation
 
-CambiOS kernel does exactly five things: manage CPU time, manage physical memory, route messages between isolated processes, enforce capabilities, and handle hardware interrupts. Everything else — device drivers, file systems, networking, graphics, audio, AI inference — runs in user-space processes with no special privileges beyond what capabilities explicitly grant.
+CambiOS kernel does exactly five things: manage CPU time, manage physical memory, route messages between isolated processes, enforce capabilities, and handle hardware interrupts. Everything else - device drivers, file systems, networking, graphics, audio, AI inference - runs in user-space processes with no special privileges beyond what capabilities explicitly grant.
 
 A smaller kernel means a smaller attack surface. A smaller attack surface means fewer places where a vulnerability grants total control.
 
 ### 3. No Telemetry. No Backdoors. No Exceptions.
 
-CambiOS will never phone home - there is no home to phone. It will never collect usage data. It will never contain a mechanism — hidden or documented — that allows remote access without the explicit, informed, per-session consent of the machine's owner. This is not a privacy "feature." It is a guarantee that is architecturally enforced: there is no telemetry subsystem to compromise because there is no telemetry subsystem.
+CambiOS will never phone home - there is no home to phone. It will never collect usage data. It will never contain a mechanism — hidden or documented — that allows remote access without the explicit, informed, per-session consent of the machine's owner. This isn't so much a privacy "feature" but a fundamental guarantee architecturally enforced: there is no telemetry subsystem to compromise because there is no telemetry subsystem.
 
-### 4. AI as Infrastructure, Not Application
+### 4. AI as Infrastructure
 
-We aren't strapping a little chat-boy on the desktop here. AI/LLM compose a structural component of the operating system — the same way virtual memory or preemptive scheduling is a structural component. Checking code before execution, detecting anomalous behavior at runtime, adapting legacy applications to run on unfamiliar hardware, live-patching if and when updates are needed - all supervised by fast and light specialized models. These are capabilities that the system depends on to function, to safeguard user data and ensure malicious code is caught and sandboxed, and to truly improve overall UX.
+CambiOS is intended to run in multiple environments and we will offer tiered deployments to our users. Where you elect to include it, we won't simply strap a little chat-bot on the desktop and call it good. AI/LLM are intended to compose a structural reinforcement of the operating system - not in a system-critical way but in a system *highly complementary* way. Checking code before execution, detecting anomalous behavior at runtime in code or network traffic, adapting legacy applications to run on unfamiliar hardware, live-patching if and when updates are needed - are all envisioned as supervised by fast and light specialized models. These are capabilities that the system depends on for increased function, to safeguard user data and ensure malicious code is caught and sandboxed, and to truly improve overall UX.
 
-This applies at the tiers of CambiOS that include AI components (see ADR-009 § Deployment Tiers). CambiOS is delivered in three tiers: an embedded tier with no AI, a standard tier with no AI but with the full non-AI feature set, and a full tier with all AI components. On tiers without AI, the features described above degrade gracefully to non-AI alternatives where they exist or are absent where they do not. The architecture is the same across all tiers; the set of user-space services compiled into the boot image is what differs.
+CambiOS is delivered in three tiers: an embedded tier with no AI, a standard tier with no AI but with the full non-AI feature set, and a full tier with all AI components. On tiers without AI, the features described above degrade gracefully to non-AI alternatives where they exist or are absent where they do not. The architecture is the same across all tiers; the set of user-space services compiled into the boot image is what differs.
 
-### 5. Identity Is Cryptographic, Not Secret-Based
+And, because a small model doesn't always have the depth required for typical user requests, you will be able to opt-in to cloud based "back-up" to the local models if you so choose.
 
-If a passwords is a shared secrets, we all know what happens when two people try to keep one. Shared secrets are almost always compromised in the end. CambiOS replaces password-based authentication with cryptographic identity — key pairs, attestation, zero-knowledge proofs. You don't prove who you are by knowing a secret. You prove who you are by demonstrating possession of a key that only you control. Identity is decentralized: no central authority can revoke your existence.
+### 5. Identity Is Cryptographic, Not a Password
+
+If a password is a shared secret, we all know what happens when two people try to keep one. Shared secrets are almost always compromised in the end. CambiOS replaces password-based authentication with cryptographic identity - key pairs, attestation, zero-knowledge proofs. You don't prove who you are by knowing a secret. You prove who you are by demonstrating possession of a key that only you control. Identity is decentralized: no central authority can revoke your existence. Internet Identity is an unsolved problem but we are working with devs who know this territory well and integrating what we find.
 
 ### 6. The Network Is Hostile
 
-CambiOS does not assume a trusted network. It does not assume DNS is honest. It does not assume IP addresses are stable or meaningful. Networking is built on cryptographic overlays where every connection is authenticated, every packet is encrypted, and routing does not depend on infrastructure that can be compromised, censored, or surveilled.
+CambiOS does not assume: a trusted network; honest DNS; stable or meaningful IP addresses. Network routing is built on cryptographic overlays where every connection is authenticated, all packets are encrypted, and routing doesn't depend on infrastructure that can be compromised, censored, or surveilled.
 
 ### 7. The System Evolves Without Stopping
 
-Reboots are an admission that the system cannot maintain its own integrity across a state change. CambiOS is designed to be live-patched — kernel updates, driver replacements, security policy changes — without interrupting running workloads. The microkernel architecture makes this possible: replacing a user-space driver is just stopping one process and starting another.
+Reboots are an admission that the system cannot maintain its own integrity across a state change. CambiOS is designed to be live-patched - kernel updates, driver replacements, security policy changes - without interrupting running workloads. The microkernel architecture makes this possible: replacing a user-space driver is simple - stop one process, start another, done.
 
 ### 8. Platform Is an Implementation Detail
 
-CambiOS runs on x86_64 and AArch64. The architecture abstraction boundary is sharp and explicit. Portable code never touches hardware directly. Architecture-specific code lives behind a defined interface. Adding a new platform means implementing that interface, not rewriting the OS.
+CambiOS runs in QEMU on x86_64, AArch64, and RISC-V. The architecture abstraction boundary is sharp and explicit. Portable code never touches hardware directly. Architecture-specific code lives behind a defined interface. Adding a new platform means implementing that interface, not rewriting the OS.
 
 ---
 
 ## Architecture
 
-CambiOS is a layered system with hard isolation boundaries between layers. Communication between layers happens exclusively through message-passing IPC, mediated by capabilities.
+CambiOS is a layered system with hard isolation boundaries between layers. Communication between layers happens exclusively through message-passing IPC, mediated by capabilities. The [homepage](/) carries the target-architecture diagram, annotated with what's running today and what's still on the roadmap.
 
-```
-+============================================================+
-|                      Applications                          |
-|  Native CambiOS apps  |  Legacy apps (Win32/POSIX compat)    |
-+============================================================+
-|                    User Experience                          |
-|  Spatial UI | Workflow AI | Social feeds | Sovereign sync   |
-+============================================================+
-|                    System Services                          |
-|  Window manager | Package manager | Shell | Update service  |
-+============================================================+
-|                    Compatibility                            |
-|  Win32 API module | POSIX layer | PE loader                 |
-+============================================================+
-|                    OS Services                              |
-|  VFS | Network stack | Audio | Graphics | Device managers   |
-+============================================================+
-|                    Core Services                            |
-|  AI Engine | Identity | Social protocol | Policy | Logging  |
-+============================================================+
-|                    Microkernel                              |
-|  Scheduling | Memory | IPC | Capabilities | Interrupts      |
-+============================================================+
-|                    Hardware                                 |
-|  x86_64  |  AArch64  |  (future targets)                   |
-+============================================================+
-```
-
-Every box above the microkernel is a user-space process. Every arrow between boxes is a capability-checked IPC message. There are no exceptions.
+Every layer above the microkernel runs as a user-space process. Every call between layers is a capability-checked IPC message. There are no exceptions.
 
 ---
 
@@ -118,7 +88,7 @@ The microkernel is the only code that runs at the highest hardware privilege lev
 
 - **Interrupt dispatch** — Hardware interrupts are caught by the kernel, translated into IPC messages, and delivered to the user-space driver that registered for them. The kernel handles the interrupt mechanism. The driver handles the interrupt meaning.
 
-### What Does Not Live in the Kernel
+### What Lives Outside the Kernel
 
 Everything else:
 
@@ -133,13 +103,13 @@ Everything else:
 - Package management
 - Logging and diagnostics
 
-Each of these runs as an isolated process. A bug in a network driver cannot corrupt the file system. A vulnerability in the graphics stack cannot read kernel memory. A compromised application cannot escalate to root because "root" doesn't exist in the traditional sense — there are only capabilities.
+Each of these runs as an isolated process. A bug in a network driver cannot corrupt the file system. A vulnerability in the graphics stack cannot read kernel memory. A compromised application cannot escalate to root because "root" doesn't exist in the traditional sense - there are only capabilities.
 
 ### IPC as the Universal Interface
 
-In a monolithic kernel, subsystems communicate through function calls and shared memory within the same address space. This is fast and completely insecure — any subsystem can read or corrupt any other's state.
+In a monolithic kernel, subsystems communicate through function calls and shared memory within the same address space. This is fast and completely insecure - any subsystem can read or corrupt any other's state.
 
-In CambiOS, subsystems communicate through IPC messages. This is the only mechanism. There is no shared memory between services unless explicitly granted through a capability. There are no system calls that bypass IPC for "performance reasons."
+In CambiOS, subsystems communicate through IPC messages. This is the only mechanism. There is no shared memory between services unless explicitly granted through a capability. There are no system calls that bypass IPC for "performance reasons." The hot path is kept minimal; the kernel ring only touched intentionally as neede
 
 The IPC system supports:
 
@@ -157,6 +127,21 @@ Every IPC message passes through an interceptor layer before delivery. The inter
 - **Audit logging** — Every capability exercise is logged. Every policy violation is recorded.
 
 The interceptor is not a firewall bolted onto the side. It is the IPC path. There is no way to send a message that doesn't go through it.
+
+### Service Clusters
+
+A subsystem is rarely one process. The rendering stack alone is a compositor, a scanout driver, an input driver, and the GUI clients drawing into surfaces — each a separate process, communicating through IPC channels. Treating these as a flat mesh of pairwise relationships works until something has to fail. When one member exits or misbehaves, the rest are left holding stale capabilities and half-torn-down channels with no shared signal that the trust contract is broken.
+
+CambiOS makes the trust contract explicit. A *service cluster* is a kernel-arbitrated, identity-bound set of processes with a manifest, a shared lifetime, and a single atomic teardown. The kernel knows the cluster's membership, signs it at construction, and treats the cluster as the unit of revocation: when a cluster is torn down, every channel between its members is severed in one locked transition. There is no window during which some channels are alive and others are gone.
+
+A cluster is bookkeeping over channels. It carries no data and introduces no new IPC primitive. Members continue to talk through ordinary capability-checked channels and the kernel still sees no payload. What the cluster adds lives at the boundary:
+
+- **Manifest of expected members** — At creation, the cluster names which identities are allowed to join in which roles. A process outside the manifest cannot impersonate one inside it.
+- **Shared fate** — Cluster channels tear down together. A subsystem runs as a coherent whole or it does not run.
+- **Quiesce before teardown** — Members receive a synchronous notification and a bounded window to stop reading before their channels are unmapped. Members that fail to acknowledge are killed before the unmap. No surviving member takes a fault on a vanished channel.
+- **Cluster-scoped capabilities** — Capabilities a member receives at join time are revoked when the cluster ends. Capabilities held independently of the cluster are untouched.
+
+The microkernel guarantees process isolation. The service cluster extends that guarantee to the trust domain a subsystem inhabits — so the "no partial-state limping" property holds across multi-process boundaries as well as within them.
 
 ---
 
@@ -389,7 +374,7 @@ The spatial interface, workflow AI, and contextual adaptation described above re
 
 ### Current: x86_64
 
-The primary development target. CambiOS boots via the Limine protocol, runs a custom GDT with per-CPU TSS, uses SYSCALL/SYSRET for fast system call entry, and schedules preemptively via the Local APIC timer. SMP is fully operational: per-CPU schedulers, task migration, load balancing, TLB shootdown. User-space services run in ring 3 — a filesystem service, key store, virtio-net network driver, and UDP/IP stack all communicate through capability-checked IPC. PCI device discovery, DMA allocation, and MMIO mapping are exposed to user-space drivers through validated syscalls.
+The primary development target. CambiOS boots via the Limine protocol, runs a custom GDT with per-CPU TSS, uses SYSCALL/SYSRET for fast system call entry, and schedules preemptively via the Local APIC timer. SMP is fully operational: per-CPU schedulers, task migration, load balancing, TLB shootdown. Six boot modules run in ring 3 — policy service, key store, filesystem service, virtio-blk driver, compositor scaffold, and shell — all communicating through capability-checked IPC. Persistent storage is live: `arcobj put/get/list/delete` round-trips across reboots on virtio-blk. PCI device discovery, DMA allocation, and MMIO mapping are exposed to user-space drivers through validated syscalls.
 
 ### Current: AArch64
 
@@ -397,9 +382,13 @@ AArch64 boots on QEMU `virt` (GICv3 required) and runs preemptive scheduling wit
 
 For the up-to-date list of remaining gaps (device IRQ routing on AArch64, SMP timer on AP, bare-metal testing) see [STATUS.md](/docs/status/).
 
+### In Progress: RISC-V (riscv64gc)
+
+A third architecture backend is in active bring-up. As of Phase R-2, CambiOS boots under OpenSBI, trampolines into a higher-half kernel via Sv48 paging, parses the device tree for memory layout, and has a working frame allocator and kernel heap with `Box::new` round-tripping end-to-end in QEMU `virt`. The bootloader is OpenSBI plus a custom S-mode `_start` — Limine doesn't ship on RISC-V. Interrupts and preemptive scheduling, user space, SMP, and full service parity are staged in subsequent phases. The target is a third first-class platform, not a hobby port.
+
 ### Future Considerations
 
-CambiOS's architecture does not assume x86 or ARM. The platform abstraction is a defined interface. If RISC-V, or something that doesn't exist yet, becomes relevant — the interface accommodates it. But we don't design for hypothetical targets. We design for a clean abstraction, and clean abstractions naturally extend.
+CambiOS's architecture does not assume any specific ISA. The platform abstraction is a defined interface; new targets are added by implementing that interface, not by rewriting the OS.
 
 ### Deployment Tiers
 
@@ -415,11 +404,9 @@ The tiers are user choices informed by hardware guidance, not kernel classificat
 
 ## What CambiOS Will Never Be
 
-Some boundaries are as important as goals. CambiOS will never:
+Beyond the headline commitments on the homepage (no telemetry, no backdoors, the machine is the owner's), some boundaries are as important as goals. CambiOS will also never:
 
-- **Collect telemetry or analytics.** No usage data. No crash reports sent without explicit consent. No "anonymous" statistics. The machine belongs to its owner, not its manufacturer.
 - **Require an internet connection.** CambiOS is fully functional offline. Network features degrade gracefully when disconnected. There is no "activation" step.
-- **Implement DRM or restrict the owner.** The machine's owner has full control. CambiOS will not prevent you from running software, modifying the OS, or accessing your own hardware. Secure boot protects the owner from unauthorized modifications, not the vendor from the owner.
 - **Include advertising, promoted content, or sponsored integrations.** The user interface serves the user. Nothing else.
 - **Depend on a single vendor's cloud services.** No Apple ID equivalent. No mandatory Microsoft account. No Google sign-in. If CambiOS ever supports cloud services, they will be pluggable, optional, and user-controlled.
 - **Sacrifice security for compatibility.** If running a legacy application requires disabling a security boundary, the application doesn't run. The user can make an informed choice to override this, but the default is always secure.
@@ -430,18 +417,21 @@ Some boundaries are as important as goals. CambiOS will never:
 
 ### What Exists Today (Summary)
 
-The microkernel is real and running on both x86_64 and AArch64. It is not a design document. It is working code — comprehensive unit tests pass on host, and integration testing runs in QEMU. The headline:
+The microkernel is real and running on x86_64, AArch64, and — in active bring-up — RISC-V. It is not a design document. It is working code: 540 unit tests pass on host and integration testing runs in QEMU. The headline:
 
 - **Kernel fundamentals** are complete: preemptive SMP scheduling with per-CPU priority-band schedulers, load balancing and task migration, per-process page tables with W^X enforcement, capability-checked IPC with zero-trust interception.
-- **Identity** is hardware-backed. A YubiKey-derived Ed25519 bootstrap principal is compiled into the kernel; no secret key lives in kernel memory. Boot modules are signed at build time and verified before execution. IPC messages carry unforgeable sender principals stamped by the kernel.
-- **Storage** uses content-addressed objects — Blake3 hashes, Ed25519 signatures verified on retrieval, ownership enforced per-principal.
-- **Networking** has a working vertical slice: user-space virtio-net driver, stateless UDP/IP stack, and a working NTP demo that queries an external time server through QEMU's SLIRP network.
+- **Phase 3 architectural substrate** has landed: shared-memory IPC channels for bulk data, capability revocation with full process-exit cleanup, and per-CPU lock-free audit rings that stream kernel enforcement decisions to user-space. The policy service (3.4) is the remaining piece before the v1 networking stack sits on top of it.
+- **Identity is hardware-backed.** A YubiKey-derived Ed25519 bootstrap principal is compiled into the kernel; no secret key lives in kernel memory. Boot modules are signed at build time and verified before execution. IPC messages carry unforgeable sender principals stamped by the kernel. The syscall dispatcher structurally rejects anonymous processes beyond a minimal survival surface.
+- **Storage is persistent.** Content-addressed objects (Blake3 hashes, Ed25519 signatures, per-principal ownership) live on a disk-backed ObjectStore over a user-space virtio-blk driver. `arcobj put/get/list/delete` round-trips across reboots on QEMU.
+- **Networking** has a working vertical slice: user-space virtio-net driver and stateless UDP/IP stack demonstrated against an external NTP server through QEMU's SLIRP network. An Intel I219-LM driver is scaffolded for the bare-metal NIC target. Identity-routed overlay networking is on the roadmap.
+- **Bare-metal tooling is ready.** `make img-usb` builds a GPT-partitioned UEFI image and `make usb` writes it safely to a device with confirmation. Not yet tested on the target hardware (Dell Precision 3630).
+- **Formal verification has started.** 29 Kani proof harnesses cover the memory allocator, ELF parser, and capability manager. Authoring them surfaced and fixed 8 real integer-overflow sites in production code.
 
-For the canonical, kept-current breakdown — every subsystem, every phase, every test count, every known issue — see **[STATUS.md](/docs/status/)**. This file (CambiOS.md) is for *intent*, not *current state*.
+For the canonical, kept-current breakdown — every subsystem, every phase, every test count, every known issue — see **[STATUS.md](/docs/status/)**. This document is for *intent*, not *current state*.
 
 ### What Comes Next
 
-The v1 target is an interactive, network-capable, identity-rooted OS running on real hardware with persistent storage. The dependency-ordered roadmap (shell → bare-metal boot → real NIC driver → DHCP/DNS → TCP → persistent storage → mesh networking → AI integration) lives in [STATUS.md § v1 Roadmap progress](/docs/status/#v1-roadmap-progress) so the order doesn't drift across documents. The architectural substrate that the post-shell items sit on — the bulk-data IPC channel primitive, externalized policy decisions, capability revocation, and audit telemetry — is described in [ADR-005](adr/005-ipc-primitives-control-and-bulk.md), [ADR-006](adr/006-policy-service.md), and [ADR-007](adr/007-capability-revocation-and-telemetry.md).
+The v1 target is an interactive, network-capable, identity-rooted OS running on real hardware with persistent storage. Shell, persistent storage, and the `arcobj` CLI are done; next are the policy service, bare-metal NIC bring-up on the Dell 3630, DHCP/DNS, a TCP stack, and then identity-routed mesh networking. The full dependency-ordered list lives in [STATUS.md § v1 Roadmap progress](/docs/status/#v1-roadmap-progress) so the order doesn't drift across documents. The architectural substrate that the networking items sit on — the bulk-data IPC channel primitive, externalized policy decisions, capability revocation, and audit telemetry — is described in [ADR-005](/adr/005-ipc-primitives/), [ADR-006](/adr/006-policy-service/), and [ADR-007](/adr/007-capability-revocation/).
 
 ### What We Don't Know Yet
 
