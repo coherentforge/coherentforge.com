@@ -6,7 +6,6 @@ date_proposed: "2026-04-13"
 weight: 11
 ---
 
-
 - **Status:** Accepted
 - **Date:** 2026-04-13
 - **Depends on:** [ADR-005](/adr/005-ipc-primitives/) (IPC Bulk Path — Channels), [ADR-007](/adr/007-capability-revocation/) (Revocation + Telemetry), [ADR-009](/adr/009-purpose-tiers-scope/) (Deployment Tiers)
@@ -129,14 +128,14 @@ Captured for future-maintainer visibility:
 
 - **New syscalls:** `SYS_MAP_FRAMEBUFFER` (#35), `SYS_SLEEP` (#36).
 - **New capabilities:** `LegacyPortIo` (PS/2 port access whitelist), `MapFramebuffer` (compositor/gpu-driver only), `LargeChannel` (tier-gated large-channel allocations).
-- **Limine pixel-format exposure:** kernel currently logs only `width × height @ addr` (src/microkernel/main.rs:273); needs to also capture `bpp`, `pitch`, pixel format masks, and iterate the full framebuffer list (currently calls `.next()` once — single-display assumption).
+- **Limine pixel-format exposure:** kernel currently logs only `width × height @ addr` ([src/microkernel/main.rs:273](https://github.com/coherentforge/cambios/blob/main/src/microkernel/main.rs#L273)); needs to also capture `bpp`, `pitch`, pixel format masks, and iterate the full framebuffer list (currently calls `.next()` once — single-display assumption).
 - **libsys `wait_irq` wrapper:** kernel implements `SYS_WAIT_IRQ = 5` but there is no userspace wrapper.
-- **`BlockReason::TimerWait` wire-up:** variant exists in src/scheduler/task.rs:280 but is currently dead code; `SYS_SLEEP` will use it.
-- **Default tick rate bump (HZ_100 → HZ_1000):** 100 Hz is inadequate for 120Hz frame pacing. HZ_1000 is already defined in src/scheduler/timer.rs; flipping it touches every timing-sensitive subsystem (network timeouts, audit drain cadence, scheduler quanta). Deferred to a measurement pass during graphics bring-up.
+- **`BlockReason::TimerWait` wire-up:** variant exists in [src/scheduler/task.rs:280](https://github.com/coherentforge/cambios/blob/main/src/scheduler/task.rs#L280) but is currently dead code; `SYS_SLEEP` will use it.
+- **Default tick rate bump (HZ_100 → HZ_1000):** 100 Hz is inadequate for 120Hz frame pacing. HZ_1000 is already defined in [src/scheduler/timer.rs](https://github.com/coherentforge/cambios/blob/main/src/scheduler/timer.rs); flipping it touches every timing-sensitive subsystem (network timeouts, audit drain cadence, scheduler quanta). Deferred to a measurement pass during graphics bring-up.
 
 ### Phased implementation (future work)
 
-Captured here to prevent the full plan file (sorted-dazzling-widget.md) from being the only record:
+Captured here to prevent the full plan file from being the only record:
 
 1. **GUI-1 — First pixels.** Boot module maps framebuffer via `SYS_MAP_FRAMEBUFFER`, draws a gradient + embedded bitmap-font text. Validates kernel → framebuffer path end-to-end.
 2. **GUI-2 — Input.** `user/ps2-kbd` and `user/ps2-mouse` with legacy-port-whitelist syscall capability. Demo evolves to keyboard echo + cursor sprite.

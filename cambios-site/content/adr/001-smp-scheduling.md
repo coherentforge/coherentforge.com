@@ -6,7 +6,6 @@ date_proposed: "2026-04-03"
 weight: 1
 ---
 
-
 - **Status:** Accepted
 - **Date:** 2026-04-03
 - **Supersedes:** N/A (foundational)
@@ -377,4 +376,4 @@ The load balancer currently picks the first Ready task. For mixed-priority workl
 
 ## Verification
 
-Test counts and what each scheduler test covers (creation, task lifecycle, block/wake, IRQ wake, priority scheduling, migration primitives, idle task immutability, etc.) live in [STATUS.md § Test coverage](/docs/status/#test-coverage). The current scheduler implementation reference is SCHEDULER.md. QEMU integration covers `-smp 1` and `-smp 2`: stable preemptive multitasking, task migration, cross-CPU wake, load balancer quiescence when balanced.
+Test counts and what each scheduler test covers (creation, task lifecycle, block/wake, IRQ wake, priority scheduling, migration primitives, idle task immutability, etc.) live in [STATUS.md § Test coverage](/docs/status/#test-coverage). The current scheduler implementation reference is [SCHEDULER.md](https://github.com/coherentforge/cambios/blob/main/src/scheduler/SCHEDULER.md). QEMU integration covers `-smp 1` and `-smp 2`: stable preemptive multitasking, task migration, cross-CPU wake, load balancer quiescence when balanced.

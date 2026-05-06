@@ -6,7 +6,6 @@ date_proposed: "2026-04-05"
 weight: 3
 ---
 
-
 - **Status:** Accepted
 - **Date:** 2026-04-05
 - **Depends on:** ADR-000 (Zero-Trust Architecture and Capability-Based Access Control)
@@ -191,3 +190,90 @@ Test counts and what each test covers (Principal construction, IPC sender stampi
 - `src/ipc/mod.rs`: Principal type, sender_principal stamping
 - `src/ipc/capability.rs`: Principal binding on ProcessCapabilities
 - `user/fs-service/src/main.rs`: User-space FS service
+
+## Divergence
+
+- **Date:** 2026-04-17
+- **Implementation:** commit `6aec800` (`fs/OBJECT_STORE: dyn dispatch → ObjectStoreBackend enum`)
+- **Trigger:** Formal-verification audit of [src/microkernel/main.rs](https://github.com/coherentforge/cambios/blob/main/src/microkernel/main.rs) surfaced `static OBJECT_STORE: Spinlock<Option<Box<dyn fs::ObjectStore + Send>>>` ([src/lib.rs:533](https://github.com/coherentforge/cambios/blob/main/src/lib.rs#L533)) as a `dyn` trait object on a kernel hot path. CLAUDE.md's Formal Verification rule says: *"No trait objects in kernel hot paths. Monomorphized generics are statically analyzable; dynamic dispatch is not."* `ObjectStore::get` / `put` / `delete` / `list` are called from every `SYS_OBJ_*` syscall handler — unambiguously a hot path.
+
+### What changed
+
+The kernel-side dispatch at the `OBJECT_STORE` static moves from `Box<dyn ObjectStore + Send>` to an **enum dispatch shim**:
+
+```rust
+pub enum ObjectStoreBackend {
+    Ram(RamObjectStore),
+    LazyDisk(DiskObjectStore<VirtioBlkDevice>),
+    // future: Network(...), etc. — each new backend = one enum variant
+}
+
+impl ObjectStore for ObjectStoreBackend {
+    fn get(&self, hash: &[u8; 32]) -> Result<CambiObject, StoreError> {
+        match self {
+            Self::Ram(s) => s.get(hash),
+            Self::LazyDisk(s) => s.get(hash),
+        }
+    }
+    // ... put / delete / list / count delegated identically
+}
+
+pub static OBJECT_STORE: Spinlock<Option<ObjectStoreBackend>> = Spinlock::new(None);
+```
+
+### What did *not* change
+
+- **The `ObjectStore` trait remains the specification** — it still defines what every backend must implement, and individual backends (`RamObjectStore`, `DiskObjectStore`) still `impl ObjectStore for …`. This preserves the Formal Verification rule's "separation of specification from implementation" — the trait is the spec, the enum is the impl shim that monomorphizes dispatch.
+- **The lazy RAM → Disk swap pattern** described in [src/fs/lazy_disk.rs](https://github.com/coherentforge/cambios/blob/main/src/fs/lazy_disk.rs) is preserved without behavior change. The atomic two-phase install (handshake outside the lock, install under the lock) becomes:
+  ```rust
+  *guard = Some(ObjectStoreBackend::LazyDisk(store));
+  ```
+  instead of `Some(Box::new(store))`. Callers see the same `ObjectStore` interface through the enum's trait impl.
+- **Test code that uses `dyn ObjectStore`** (mock stores in unit tests with their own scope) is unchanged — `dyn` is permitted in test code per the Formal Verification rule's "non-test kernel code" qualifier.
+
+### Cost
+
+Each new backend (e.g., a future `NetworkObjectStore` for peer sync per the original ADR's openness) requires one new enum variant and one new arm in each delegated method. That is the *exact* cost a verifier wants to see — closed-world, exhaustive match, no unbounded extension point in kernel code. Adding a backend is a single-file change with a compile error if any method dispatch arm is missed.
+
+### Why not other options
+
+| Considered | Why rejected |
+|---|---|
+| Static-dispatch generics (`Spinlock<Option<S: ObjectStore>>`) | Doesn't compile — `static` items require concrete types; can't carry a generic parameter pinned at runtime. |
+| Drop the `ObjectStore` trait entirely; single struct with internal `Backend` enum | Loses the spec/impl separation the Formal Verification rule wants encoded. The trait is the spec; the enum is the impl. Conflating them erases the audit point. |
+| Keep `dyn`, document the verification debt in ASSUMPTIONS.md | Pure deferral. The fix is structurally cheap and the debt is on a hot path — paying it now beats carrying it. |
+
+### Related (not in this ADR's scope)
+
+The same rule and the same monomorphization pattern apply to the kernel-side IPC interceptor (`Box<dyn IpcInterceptor>` on both `IpcManager` and `ShardedIpcManager`, called on every IPC send). That site will receive the same enum-dispatch treatment in a separate change, with a divergence appended to the relevant policy/interceptor ADR (to be decided when that work is sequenced). The decision rule is identical; only the call site differs.
+
+To keep the follow-up from being lost in an appendix:
+- Source-level `// VERIFICATION DEBT:` markers tag the two `dyn IpcInterceptor` field sites in [src/ipc/mod.rs](https://github.com/coherentforge/cambios/blob/main/src/ipc/mod.rs).
+- A row in [STATUS.md § Known issues](/docs/status/#known-issues) names the debt at the project-status level.
+- The CLAUDE.md "Policy / `on_syscall` / interceptor decisions" Required Reading row links back to this divergence so any future edit on `src/ipc/interceptor.rs` picks up the precedent before code is written.
+
+### Verification
+
+After this change, every `SYS_OBJ_*` handler dispatches via match-arm calls (monomorphized at compile time, statically analyzable, exhaustive). The trait remains as the specification verifier targets implement against. The kernel binary contains no `dyn ObjectStore` references.
+
+## Divergence: 2026-04-30 — Principal as 32-byte AID
+
+- **Superseded by:** [ADR-025](/adr/025-principal-as-aid/) (Principal as 32-byte AID, decoupled from key bytes)
+- **Trigger:** Pre-v1 audit of post-quantum migration cost. ML-DSA-65 keys are 1952 bytes; if "Principal IS the Ed25519 pubkey" remained the contract, the v1.5 PQ upgrade would force `sender_principal` out of the 256-byte IPC envelope ([ADR-005](/adr/005-ipc-primitives/)) and force a redesign of the boot-sized capability tables ([ADR-008](/adr/008-boot-time-object-tables/)). [identity.md § Dynamic-Sized Field Space](/docs/identity/#dynamic-sized-field-space) had already declared the identity layer "algorithm-agnostic" with dynamic-sized keys — a posture this ADR's Principal definition contradicted.
+
+### What changed
+
+The ratified contract for `Principal` is now: **a 32-byte AID (Autonomic Identifier), not a public key.** The 32-byte size is architectural — fixed by the AID model, invariant under key rotation and algorithm migration. In v1, the AID bytes coincide with an Ed25519 pubkey for backward continuity (no key event log yet, no rotation, no keystore). In v1.5+, the AID is `blake3(key_event_log_inception_block)` and the actual signing key is resolved at verify time via the keystore service.
+
+The `Principal` struct in [src/ipc/mod.rs](https://github.com/coherentforge/cambios/blob/main/src/ipc/mod.rs) renames `public_key: [u8; 32]` to `aid: [u8; 32]` and exposes two accessors: `aid()` for identity equality / IPC stamping / lookup, and `current_key_bytes()` for verifier sites. Pre-v1, `current_key_bytes()` is the identity function on `aid()`; at v1.5 its body becomes a keystore round-trip — a one-function migration instead of a five-site refactor.
+
+### What did *not* change
+
+- **The `sender_principal` wire format** stays 32 bytes ([src/ipc/mod.rs](https://github.com/coherentforge/cambios/blob/main/src/ipc/mod.rs) `Message::sender_principal`). The 256-byte IPC envelope ([ADR-005](/adr/005-ipc-primitives/)) is preserved without modification.
+- **`BindPrincipal` semantics.** The kernel still accepts a raw 32-byte value from userspace; it does not hash. The semantic shift is in vocabulary: those 32 bytes are now the AID, and v1 happens to use raw pubkey bytes as a v1-only AID-derivation shortcut.
+- **Bootstrap trust model.** The bootstrap Principal continues to be compile-time embedded in `bootstrap_pubkey.bin`. (The file format gains a header in a separate change so the algorithm is explicit, but the trust path is unchanged.)
+- **CambiObject author/owner fields.** Still raw 32-byte public keys per [ADR-004](/adr/004-cryptographic-integrity/). When the keystore lands at v1.5, those fields can either continue to carry pubkeys or migrate to AIDs; that choice belongs to the keystore-service ADR, not this one.
+
+### Note on the original Principal definition above
+
+The struct shown in this ADR's "Principal: The Identity Primitive" section ([line 35](#principal-the-identity-primitive)) lists a `key_hash: [u8; 16]` FNV-1a fast-comparison field that was never implemented in the actual code (the kernel-side `Principal` only ever carried `public_key: [u8; 32]`). That field is dropped under ADR-025; comparison is by full 32-byte AID equality. Documenting here so the historical drift between the original ADR and the kernel code does not propagate further.

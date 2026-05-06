@@ -1,11 +1,10 @@
 ---
-title: "Persistent ObjectStore — On-Disk Format"
-adr_num: "010a"
+title: "Persistent ObjectStore — on-disk format"
+adr_num: "010"
 status: "Accepted"
 date_proposed: "2026-04-14"
 weight: 10
 ---
-
 
 - **Status:** Accepted
 - **Date:** 2026-04-14

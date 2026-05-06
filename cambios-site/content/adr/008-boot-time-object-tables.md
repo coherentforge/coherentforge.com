@@ -6,7 +6,6 @@ date_proposed: "2026-04-11"
 weight: 8
 ---
 
-
 - **Status:** Accepted
 - **Date:** 2026-04-11
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities), [ADR-009](/adr/009-purpose-tiers-scope/) (Purpose, Deployment Tiers, and Scope Boundaries)
@@ -21,7 +20,7 @@ This ADR is written after [ADR-009](/adr/009-purpose-tiers-scope/), which commit
 
 ## Problem
 
-CambiOS's kernel currently stores per-process state in fixed-size dense arrays sized by the compile-time constant `MAX_PROCESSES = 32`. This includes the process descriptor table in src/process.rs and the capability table in src/ipc/capability.rs. Every slot is preallocated at boot, regardless of whether it is used. Lookups are O(1) array indexing. Verification invariants reason about the array as a statically-bounded structure.
+CambiOS's kernel currently stores per-process state in fixed-size dense arrays sized by the compile-time constant `MAX_PROCESSES = 32`. This includes the process descriptor table in [src/process.rs](https://github.com/coherentforge/cambios/blob/main/src/process.rs) and the capability table in [src/ipc/capability.rs](https://github.com/coherentforge/cambios/blob/main/src/ipc/capability.rs). Every slot is preallocated at boot, regardless of whether it is used. Lookups are O(1) array indexing. Verification invariants reason about the array as a statically-bounded structure.
 
 This was the right design when the kernel ran three processes in total. It is the wrong design for a general-purpose operating system that targets modern hardware and expects to run user workloads beyond a handful of core services. Four problems have accumulated, and together they motivate this ADR.
 
@@ -347,7 +346,7 @@ The chosen approach does not solve the "what if a workload wants more than the c
 
 ## Verification Stance
 
-CambiOS's verification posture, documented in [CLAUDE.md](/docs/status/) under "Formal Verification (Non-Negotiable Constraint)," has several requirements that any kernel change must respect:
+CambiOS's verification posture, documented in [CLAUDE.md](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md) under "Formal Verification (Non-Negotiable Constraint)," has several requirements that any kernel change must respect:
 
 - Bounded iteration (no unbounded loops in kernel paths)
 - Invariants encoded in types where possible
@@ -570,9 +569,9 @@ This ADR commits to introducing the generation counter as part of Wave 2c, along
 - **[ADR-006](/adr/006-policy-service/)** — Policy service. The policy of who holds `CreateProcess` is mediated by the policy service when it lands in Wave 4. This ADR provides the mechanism; ADR-006 decides the policy.
 - **[ADR-007](/adr/007-capability-revocation/)** — Capability revocation. Wave 1 landed the revocation primitive used here for process-exit cleanup. This ADR does not change revocation mechanics.
 - **[ADR-009](/adr/009-purpose-tiers-scope/)** — Purpose, deployment tiers, and scope boundaries. This ADR depends on ADR-009 for the hardware floors that establish the hardware range this ADR's allocation model serves. This ADR also inherits ADR-009's "single kernel binary across tiers" commitment.
-- **[CLAUDE.md § Lock Ordering](/docs/status/#lock-ordering)** — Lock hierarchy reference. Unchanged by this ADR.
-- **[CLAUDE.md § Memory Layout](/docs/status/#memory-layout)** — Memory layout reference. This ADR adds the kernel object table region as a new entry in the memory layout, distinct from the kernel heap.
-- **[CLAUDE.md § Formal Verification](/docs/status/#formal-verification-non-negotiable-constraint)** — Verification posture. This ADR's Verification Stance section defends the claim that boot-time-sized tables with dedicated-region storage preserve the verification properties the posture requires.
+- **[CLAUDE.md § Lock Ordering](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md#lock-ordering)** — Lock hierarchy reference. Unchanged by this ADR.
+- **[CLAUDE.md § Memory Layout](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md#memory-layout)** — Memory layout reference. This ADR adds the kernel object table region as a new entry in the memory layout, distinct from the kernel heap.
+- **[CLAUDE.md § Formal Verification](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md#formal-verification-non-negotiable-constraint)** — Verification posture. This ADR's Verification Stance section defends the claim that boot-time-sized tables with dedicated-region storage preserve the verification properties the posture requires.
 - **[STATUS.md](/docs/status/)** — Implementation status. This ADR's Wave 2 sub-waves will update STATUS.md as they land.
 - **[ASSUMPTIONS.md](/docs/assumptions/)** — Numeric bounds catalog. This ADR adds rows for the tier policies (`TIER1_POLICY`, `TIER2_POLICY`, `TIER3_POLICY`) as TUNING entries. The existing `MAX_PROCESSES` row is removed as the constant itself is removed.
 

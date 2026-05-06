@@ -6,7 +6,6 @@ date_proposed: "2026-04-10"
 weight: 5
 ---
 
-
 - **Status:** Accepted
 - **Date:** 2026-04-10
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities), [ADR-002](/adr/002-enforcement-pipeline/) (Three-Layer Enforcement Pipeline)
@@ -180,17 +179,17 @@ The kernel signature on the record is what makes channel telemetry trustworthy a
 
 | Number | Name | Purpose |
 |---|---|---|
-| (TBD) | `SYS_CHANNEL_CREATE` | Allocate a new channel; map RW into caller; return handle + capability token |
-| (TBD) | `SYS_CHANNEL_ATTACH` | Verify capability token, map RO/RW into caller; return handle |
-| (TBD) | `SYS_CHANNEL_CLOSE` | Unmap from both peers, free pages, revoke capability |
-| (TBD) | `SYS_CHANNEL_REVOKE` | Force-close from a third party with revoke authority |
-| (TBD) | `SYS_CHANNEL_INFO` | Read channel metadata (size, peers, purpose, byte counts) |
+| 28 | `SYS_CHANNEL_CREATE` | Allocate a new channel; map RW into caller; return handle + capability token |
+| 29 | `SYS_CHANNEL_ATTACH` | Verify capability token, map RO/RW into caller; return handle |
+| 30 | `SYS_CHANNEL_CLOSE` | Unmap from both peers, free pages, revoke capability |
+| 31 | `SYS_CHANNEL_REVOKE` | Force-close from a third party with revoke authority |
+| 32 | `SYS_CHANNEL_INFO` | Read channel metadata (size, peers, purpose, byte counts) |
 
-Numbers will be assigned when implementation lands. They are deliberately not specified here because the syscall numbering for CambiOS is contiguous and assigning them now would create gaps if implementation order shifts.
+Canonical source: the `SyscallNumber` enum in [src/syscalls/mod.rs](https://github.com/coherentforge/cambios/blob/main/src/syscalls/mod.rs). Run `make stats` for the current count across the whole ABI.
 
 ### Notification
 
-The primary notification mechanism is **control IPC**: when a producer has written a batch of data into a channel ring buffer, it sends a small message through its existing 256-byte path saying "X bytes available." The consumer wakes (via the existing IPC blocking primitives — see SCHEDULER.md § Blocking and Wake Primitives), reads from the shared memory, and processes.
+The primary notification mechanism is **control IPC**: when a producer has written a batch of data into a channel ring buffer, it sends a small message through its existing 256-byte path saying "X bytes available." The consumer wakes (via the existing IPC blocking primitives — see [SCHEDULER.md § Blocking and Wake Primitives](https://github.com/coherentforge/cambios/blob/main/src/scheduler/SCHEDULER.md#blocking-and-wake-primitives)), reads from the shared memory, and processes.
 
 This means **no new notification primitive** in the kernel. The existing IPC layer carries the wake-up. The channel just carries the data the wake-up refers to.
 
@@ -261,7 +260,7 @@ Channels add a new verification target with a *simpler* property to prove: **the
 
 This is structurally easier than verifying a stream. The kernel doesn't have to prove anything about the bytes; it has to prove that the *plumbing* (page table entries, TLB shootdowns, capability records) is correct. Page table reasoning is well-understood, and the relevant invariants are local: "after `ATTACH` returns, B has a mapping of the channel pages with the requested access mode and no other process does."
 
-The trade is: we get a primitive that scales to any bandwidth, in exchange for verifying a different set of invariants than the control IPC verifies. The total verification surface increases, but each subsystem's invariants stay individually tractable. This is consistent with [CLAUDE.md § Formal Verification](/docs/status/#formal-verification-non-negotiable-constraint): "pure logic separated from effects" — the channel manager's logic (allocate, map, sign, record) is pure with respect to the data flow, and the data flow is the MMU's job.
+The trade is: we get a primitive that scales to any bandwidth, in exchange for verifying a different set of invariants than the control IPC verifies. The total verification surface increases, but each subsystem's invariants stay individually tractable. This is consistent with [CLAUDE.md § Formal Verification](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md#formal-verification-non-negotiable-constraint): "pure logic separated from effects" — the channel manager's logic (allocate, map, sign, record) is pure with respect to the data flow, and the data flow is the MMU's job.
 
 ## Why Not Just Make the Control IPC Bigger?
 
@@ -324,9 +323,9 @@ These are out of scope for the ADR but worth recording so they're not rediscover
 - **[ADR-006](/adr/006-policy-service/)** — Policy externalization (channel creation may be policy-gated)
 - **[ADR-007](/adr/007-capability-revocation/)** — Revocation mechanics + telemetry consumers (channel close paths and AI observability)
 - **[CambiOS.md § The Microkernel](/docs/architecture/)** — Source-of-truth: "no shared memory between services unless explicitly granted through a capability"
-- **[CLAUDE.md § Lock Ordering](/docs/status/#lock-ordering)** — Channel manager will sit at a new position in the hierarchy (TBD during implementation)
+- **[CLAUDE.md § Lock Ordering](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md#lock-ordering)** — `CHANNEL_MANAGER` is position 5 in the canonical hierarchy (between `CAPABILITY_MANAGER`(4) and `PROCESS_TABLE`(6)). Per-channel shards (`SHARDED_IPC.shards[endpoint]`) are a separate lock domain — never held cross-endpoint, released before acquiring the scheduler for task wake.
 - **[SECURITY.md § Gap Analysis](/docs/security/#gap-analysis)** — Capability revocation gap (closes via ADR-007 + channels)
-- **SCHEDULER.md § Blocking and Wake Primitives** — Notification path (channels reuse existing IPC wake)
+- **[SCHEDULER.md § Blocking and Wake Primitives](https://github.com/coherentforge/cambios/blob/main/src/scheduler/SCHEDULER.md#blocking-and-wake-primitives)** — Notification path (channels reuse existing IPC wake)
 
 ## See Also in CLAUDE.md
 
@@ -337,3 +336,20 @@ When implementing the changes specified by this ADR, the following CLAUDE.md sec
 - **§ "Syscall Numbers"** — add the four new channel syscalls when assigned
 - **§ "Required Reading by Subsystem"** (when added) — under "If you are touching IPC" and "If you are adding a new user-space service"
 - **§ "Post-Change Review Protocol" Step 8** (when added) — channels touch page tables, so the change set affects the memory subsystem reference docs as well
+
+## Divergence: 2026-05-01 — Post-Quantum Audit (Non-Change)
+
+- **Trigger:** Pre-v1 audit of post-quantum migration. ML-DSA-65 keys are 1952 bytes; signatures are 3293 bytes. The question: does the 256-byte control envelope survive the v1.5 PQ upgrade, or does it have to grow?
+- **Conclusion:** **The 256-byte envelope is correct as specified.** No change to the wire format, no change to the per-endpoint queue sizing, no change to the Three-Layer Enforcement Pipeline.
+- **Reasoning recorded so future re-litigation has the audit trail:**
+  - **Signatures are not in the IPC hot path.** ARCSIG trailers live on ELF binaries (loader), `ObjPutSigned` signatures live in object metadata (storage). Today's IPC messages do not carry inline signatures. The largest existing message is `libfs-proto::PUT_BY_NAME` at ~201 bytes; signed-input events ([ADR-012](/adr/012-input-architecture/) tier ≥2) are 96-byte event records, with signatures travelling as separate 96-byte signature events behind the same ceiling.
+  - **`sender_principal` is fixed at 32 bytes regardless of key algorithm.** Per [ADR-025](/adr/025-principal-as-aid/), a `Principal` is a 32-byte AID — decoupled from the underlying signing key. When ML-DSA-65 lands, the keystore swaps Ed25519 → ML-DSA-65, but the AID stays 32 bytes; the IPC stamp does not grow.
+  - **Bulk + signed payloads belong on channels, not the control envelope.** A PQ-signed artifact (large content + 3293-byte signature) routes via [§ Channels](#channels-bulk-data-path) or via `ObjectStore` references in a 256-byte control message. Growing the envelope to "make room for PQ sigs" would (a) defeat the verification-tractability rationale that motivated 256 in the first place and (b) still not solve the data-plane problem channels exist to solve.
+- **What this enables that growing the envelope would not:** A future ML-DSA-65 (or hybrid Ed25519 + ML-DSA-65) sender stamps the same `sender_principal` as today's Ed25519 sender. Recipients see the same 32-byte tag. The kernel's per-endpoint queue allocation (`MAX_ENDPOINTS × MAX_QUEUE_DEPTH × MESSAGE_SIZE`) does not change. Verification proofs over the IPC hot path remain bounded.
+- **Companion changes that landed alongside this audit (pre-v1):**
+  - [ADR-025](/adr/025-principal-as-aid/) ratifying Principal-as-AID.
+  - `bootstrap_pubkey.bin` gains a CKEY v1 header so its algorithm is explicit at boot.
+  - ARCSIG trailer parser dispatches on (version, algo) bytes instead of byte-exact matching the legacy magic suffix.
+  - New `src/crypto/` module owns the verify boundary, dispatching on `SignatureAlgo`. Five Ed25519 call sites now route through it.
+  - `Principal::aid()` / `Principal::current_key_bytes()` accessors split identity from verify-input — at v1.5, only `current_key_bytes()`'s body changes.
+- **Revisit when:** identity.md Phase 1.5 lands and the keystore service ADR is being designed. At that point, re-confirm the 256-byte envelope still holds (it should — the audit reasoning above does not depend on which algorithm the keystore returns).

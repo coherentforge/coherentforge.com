@@ -6,7 +6,6 @@ date_proposed: "2026-04-16"
 weight: 15
 ---
 
-
 - **Status:** Proposed
 - **Date:** 2026-04-16
 - **Depends on:** [ADR-003](/adr/003-content-addressed-storage/) (Content-Addressed Storage + Identity), [ADR-004](/adr/004-cryptographic-integrity/) (Cryptographic Integrity), [ADR-010](/adr/010-persistent-object-store/) (Persistent ObjectStore On-Disk Format)
@@ -191,7 +190,7 @@ ADR-007 audit drain pointers, recognition records (enrolled pubkeys from the enr
 
 ### Rename: arcobj → cambiobj
 
-The shell utility that exposes ObjectStore operations is renamed to `cambiobj` as part of the ArcOS → CambiOS rebrand debt. Tier-aware subcommands added in the same pass: `cambiobj list [--tier=private|public|all]`, `cambiobj history <name>`, `cambiobj share <name> <recipient>` (presence-gated).
+The shell utility that exposes ObjectStore operations is renamed to `cambiobj` as part of the CambiOS → CambiOS rebrand debt. Tier-aware subcommands added in the same pass: `cambiobj list [--tier=private|public|all]`, `cambiobj history <name>`, `cambiobj share <name> <recipient>` (presence-gated).
 
 ## Rationale
 

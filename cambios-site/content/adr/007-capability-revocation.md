@@ -6,7 +6,6 @@ date_proposed: "2026-04-10"
 weight: 7
 ---
 
-
 - **Status:** Accepted
 - **Date:** 2026-04-10
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities), [ADR-002](/adr/002-enforcement-pipeline/) (Three-Layer Enforcement Pipeline)
@@ -142,7 +141,7 @@ The "in-flight operations complete" property is important. Revocation is not ret
 pub fn revoke(&mut self, capability: CapabilityHandle, revoker: ProcessId)
     -> Result<(), CapabilityError>;
 
-// Syscall (number TBD)
+// SYS_REVOKE_CAPABILITY = 27
 //   Args: arg1 = capability handle (u64)
 //   Returns: 0 on success, negative error code
 SYS_REVOKE_CAPABILITY
@@ -317,8 +316,11 @@ The second method is for process termination cleanup — when a process exits, a
 
 | Number | Name | Purpose |
 |---|---|---|
-| (TBD) | `SYS_REVOKE_CAPABILITY` | Revoke a capability the caller has authority to revoke |
-| (TBD) | `SYS_AUDIT_INFO` | Read kernel audit statistics: total events, dropped events, channel state |
+| 27 | `SYS_REVOKE_CAPABILITY` | Revoke a capability the caller has authority to revoke |
+| 33 | `SYS_AUDIT_ATTACH` | Attach as the audit ring consumer (maps ring RO into caller; bootstrap-Principal-only) |
+| 34 | `SYS_AUDIT_INFO` | Read kernel audit statistics: total events, dropped events, channel state |
+
+Canonical source: the `SyscallNumber` enum in [src/syscalls/mod.rs](https://github.com/coherentforge/cambios/blob/main/src/syscalls/mod.rs).
 
 `SYS_AUDIT_INFO` exists for observability of the observer — the policy service needs to know if its audit consumer is keeping up.
 
@@ -340,7 +342,7 @@ If the policy service is not yet ready when events are produced (between steps 4
 
 ### Lock ordering
 
-The audit telemetry mechanism does not introduce a new lock to the hierarchy. The per-CPU staging buffers are lock-free (single producer per CPU, no contention). The global drain task acquires the audit channel ring lock briefly during drain, but the ring lock is at the same hierarchy position as the channel manager (TBD during implementation), and it is never held while acquiring scheduler or capability locks.
+The audit telemetry mechanism does not introduce a new lock to the main hierarchy. The per-CPU staging buffers (`PER_CPU_AUDIT_BUFFER[cpu]`) are lock-free (single producer per CPU, no contention). The global `AUDIT_RING` lives in its own lock domain — acquired by `drain_tick()` (try_lock from the BSP timer ISR, holds no other lock) and by the `SYS_AUDIT_ATTACH` / `SYS_AUDIT_INFO` handlers under a two-phase protocol that never holds it while `PROCESS_TABLE` or `FRAME_ALLOCATOR` is held. `audit::emit()` never touches it. See [CLAUDE.md § Lock Ordering](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md#lock-ordering) for the canonical map.
 
 The revocation primitive does add a new sequencing constraint: `revoke()` must hold `CAPABILITY_MANAGER(4)` and may need to acquire `PROCESS_TABLE(5)` and `FRAME_ALLOCATOR(6)` to clean up associated channel mappings. This matches the existing lock order — revocation always acquires in 4 → 5 → 6 sequence, never the reverse.
 
@@ -440,3 +442,11 @@ Phase 3.3 implementation (2026-04-12) diverges from this ADR in three ways:
 2. **Global ring is kernel-internal, not a ChannelManager record.** The ADR specifies using "the channel mechanism from ADR-005." Implementation revealed that the kernel has no ProcessId, no Principal, and no VMA tracker — the channel state machine would require extensive special-casing. Instead, the ring is a dedicated `AuditRing` struct backed by contiguous physical pages allocated at boot. When the policy service attaches via `SYS_AUDIT_ATTACH`, those same physical pages are mapped RO into its address space — reusing the same `map_range` logic but bypassing `ChannelManager`. This preserves the ADR's intent (kernel produces, consumer reads RO) without architectural contortion.
 
 3. **Drain via BSP timer ISR piggyback, not a dedicated background task.** The ADR mentions a "background task" for draining per-CPU staging buffers to the global ring. Implementation uses the BSP timer ISR (100 Hz) with `try_lock()` and a bounded batch size (`DRAIN_BATCH_SIZE = 64`). This avoids consuming a scheduler slot for what is essentially "copy 640 bytes every 10ms". If profiling shows the drain is too expensive for ISR context, it can be moved to a dedicated task without changing the `emit()` API or buffer layout.
+
+[ADR-026](/adr/026-identity-transcription/) framing (2026-05-02) refines three properties of this ADR's mechanism without changing what was decided. ADR-026 is the kernel-side architectural codification of the multi-Principal vault, the transcription invariant, and per-Principal AI containment; the items below are the points where that framing reaches into ADR-007's revocation + audit machinery.
+
+4. **Containment is per-Principal, not per-process.** This ADR's "How These Two Primitives Combine" loop describes the AI watcher building behavioral baselines and the policy service revoking specific holders' caps when anomalies surface. ADR-026 § 3 sharpens the unit of containment: under the multi-Principal vault model in [identity.md § The Vault](/docs/identity/#the-vault), one human runs many Principals concurrently across many processes. AI baselines and policy responses key on the **Principal**, not on the process — when `Principal_X` exhibits anomalous behavior, narrowing applies to every process bound to `Principal_X` (which may be one process or several), and no process bound to `Principal_Y` is affected even if `Principal_X` and `Principal_Y` belong to the same human. The kernel-side mechanism is unchanged: `revoke_all_for_process` is the per-process exit cleanup; per-Principal narrowing is the policy service issuing one or more `SYS_REVOKE_CAPABILITY` calls keyed by holders' bound Principals. The framing — *blast radius is a context, not a person* — is what ADR-026 codifies, and what makes "AI watches and contains" a usable architecture rather than a brittle one.
+
+5. **The revocation primitive specified here is the *internal-cap* form.** ADR-026 § 2 (capability shape duality) names the boundary explicitly. `SYS_REVOKE_CAPABILITY` and `CapabilityManager::revoke()` operate on the kernel's internal cap form — a `(endpoint, rights)` table entry under `CAPABILITY_MANAGER`. Synchronous, kernel-led, push-based; correct for caps the kernel directly owns, and the invariants in this ADR's "What revocation means" hold for that form. They do **not** cover the *external-cap* form: caps that have been emitted across a trust boundary (stored alongside CambiObjects per [ADR-010](/adr/010-persistent-object-store/), included in boot manifests per [ADR-018](/adr/018-init-process-and-boot-manifest/), handed across processes via signed delegation, persisted across reboots). External caps need an asynchronous, holder-led, pull-based revocation: the issuer maintains a non-revocation accumulator (a small constant-size cryptographic structure published as a CambiObject); cap holders carry witnesses against the accumulator; verification at use checks witness-against-current-accumulator membership; revocation is an accumulator update — holders converge asynchronously by refreshing their witnesses, and revoked holders cannot generate a new witness because their cap was excluded from the new accumulator. **A future amendment to this ADR will specify the witness-and-accumulator wire/disk format**; this Divergence entry only names the slot. Until that amendment lands, persistent caps have no revocation path beyond "delete the object." [identity.md § Capability Revocation (Tiered by Cap Shape)](/docs/identity/#capability-revocation-tiered-by-cap-shape) carries the user-facing framing for both forms.
+
+6. **Bootstrap-Principal authority on `SYS_REVOKE_CAPABILITY` is a transcription-invariant vestige, slated for migration.** The Phase 3.1 implementation in [src/ipc/capability.rs:720](https://github.com/coherentforge/cambios/blob/main/src/ipc/capability.rs#L720) (`CapabilityManager::revoke`) gates the syscall by checking `revoker_principal != bootstrap`. Per ADR-026 § 1 (transcription invariant), this is a kernel hot-path branch on a Principal value — exactly the kind of identity *interpretation* that [ADR-023](/adr/023-audit-consumer-capability/) has already started migrating elsewhere by replacing equality checks with capability checks. The migration target for this site, when Phase 3.4's policy service lands as the mediator (see this ADR's "Who can revoke" — the third authority path), is a system capability (e.g., `CapabilityKind::RevokeCapability`) replacing the Principal-equality test, with the cap granted to the policy service at boot via the manifest. Documenting the vestige here means a future migrator can cite this Divergence + ADR-026 § 1 when collapsing the check rather than re-deriving the rationale. The migration is not a behavior change — it converts an interpretation site to a transcription-compatible site without altering who can revoke in practice.

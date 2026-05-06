@@ -6,7 +6,6 @@ date_proposed: "2026-04-11"
 weight: 9
 ---
 
-
 - **Status:** Accepted
 - **Date:** 2026-04-11
 - **Depends on:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust + Capabilities)
@@ -227,7 +226,7 @@ Future ADRs should cite this one when their scope, hardware assumptions, or tier
 - [CambiOS.md](/docs/architecture/) — Source-of-truth architecture document. This ADR makes explicit the commitments that CambiOS.md carries implicitly. CambiOS.md is updated to cross-reference this ADR for tier-specific scope and hardware commitments.
 - [PHILOSOPHY.md](/docs/philosophy/) — Project philosophy. The Purpose Statements section aligns with and makes concrete the philosophical stance described there, particularly the "AI watches without controlling" framing.
 - [GOVERNANCE.md](/docs/governance/) — Project governance, funding, and contributor commitments. Addresses the funding and institutional independence questions that are adjacent to but distinct from this ADR's architectural commitments.
-- [CLAUDE.md](/docs/status/) — Kernel technical reference. Several sections of CLAUDE.md should reference this ADR once it lands (see "See Also in CLAUDE.md" below).
+- [CLAUDE.md](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md) — Kernel technical reference. Several sections of CLAUDE.md should reference this ADR once it lands (see "See Also in CLAUDE.md" below).
 - [SECURITY.md](/docs/security/) — Security posture document. Purpose 2 is where SECURITY.md's threat model connects to this ADR.
 - [win-compat.md](/docs/win-compat/) — Windows compatibility design. This ADR makes explicit that Windows compat is a bridge (Principle 5) and scopes it to Tiers 2 and 3.
 - [identity.md](/docs/identity/) — Identity architecture. Purpose 3 (user sovereignty) is operationalized in identity.md's Principal and key management model.

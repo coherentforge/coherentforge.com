@@ -1,11 +1,10 @@
 ---
-title: "Policy Service — Externalized Authorization"
+title: "Policy Service — Externalized Authorization Decisions"
 adr_num: "006"
 status: "Accepted"
 date_proposed: "2026-04-10"
 weight: 6
 ---
-
 
 - **Status:** Accepted
 - **Date:** 2026-04-10
@@ -23,7 +22,7 @@ Right now the answer is hardcoded in the kernel:
 - `SYS_REGISTER_ENDPOINT` grants the calling process full rights on the new endpoint, no questions asked
 - Boot module loading grants the bootstrap Principal full rights on the kernel processes, with the trust check baked into `BinaryVerifier`
 - Delegation is allowed if the source holds the `delegate` right and is not escalating beyond what they already have
-- The `IpcInterceptor::on_syscall` hook exists at src/syscalls/dispatcher.rs but its default policy is permissive — it always returns `Allow`. [SECURITY.md](/docs/security/) lists per-process syscall allowlists as "Not implemented" (gap #1, highest priority)
+- The `IpcInterceptor::on_syscall` hook exists at [src/syscalls/dispatcher.rs](https://github.com/coherentforge/cambios/blob/main/src/syscalls/dispatcher.rs) but its default policy is permissive — it always returns `Allow`. [SECURITY.md](/docs/security/) lists per-process syscall allowlists as "Not implemented" (gap #1, highest priority)
 
 Each of these decisions is *policy*. Each one is currently expressed as Rust code inside the kernel. Each one is therefore impossible to update without recompiling the kernel, impossible to observe without instrumenting the kernel, and impossible to drive from a separate process — including the AI security service that [PHILOSOPHY.md](/docs/philosophy/) and [CambiOS.md](/docs/architecture/) both describe as a userspace observer.
 
@@ -189,7 +188,9 @@ The "AI watches" stance is not a constraint we're imposing on top of the archite
 
 `policy-service` is a user-space ELF, like every other Core Service (fs-service, key-store, virtio-net, udp-stack). It runs in ring 3, holds capabilities for an IPC endpoint dedicated to policy queries, and is signed at build time by the bootstrap key. It is loaded as a boot module and started during the kernel's normal user-space service init phase.
 
-The kernel knows the policy service's IPC endpoint via a compile-time constant (or, eventually, via the boot manifest in [ADR-021 Init Process](/docs/status/#planned-next-steps-roadmap), when that exists). The endpoint is reserved for the policy service — no other process can register it.
+The kernel knows the policy service's IPC endpoint via a compile-time constant. The endpoint is reserved for the policy service — no other process can register it.
+
+> **Deferred decision.** Replacing the compile-time constant with a boot-manifest-declared endpoint under [ADR-018 (Init Process and Boot Manifest)](/adr/018-init-process-and-boot-manifest/). **Revisit when:** ADR-018 moves from `Proposed` → `Accepted` and its manifest loader lands in the kernel. At that point every `(Principal, endpoint)` pair a service needs becomes data the manifest declares, and the hand-rolled constants here — plus the matching constants in `user/libsys/src/lib.rs` and `user/libfs-proto/src/lib.rs` — all become the manifest's responsibility.
 
 ### The upcall mechanism
 
@@ -345,7 +346,7 @@ Steps 1–7 establish the architectural slot without changing observable behavio
 - **[CambiOS.md § Architecture](/docs/architecture/)** — Layer diagram showing "Policy" as a Core Service above the microkernel
 - **[PHILOSOPHY.md](/docs/philosophy/) lines 73-99** — "AI observes without controlling the kernel"
 - **[SECURITY.md § Gap Analysis](/docs/security/#gap-analysis)** — Items 1, 5, "Runtime behavioral AI" all addressed by this ADR + ADR-007
-- **SCHEDULER.md § Blocking and Wake Primitives** — `BlockReason::PolicyWait` joins the existing block reasons
+- **[SCHEDULER.md § Blocking and Wake Primitives](https://github.com/coherentforge/cambios/blob/main/src/scheduler/SCHEDULER.md#blocking-and-wake-primitives)** — `BlockReason::PolicyWait` joins the existing block reasons
 
 ## See Also in CLAUDE.md
 
