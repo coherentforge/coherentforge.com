@@ -2,9 +2,22 @@
 <section class="hero">
   <div class="hero-content">
     <h1>A secure bridge from<br>human consciousness<br>to the <span class="accent">electron</span>.</h1>
-    <p class="hero-intent">That's the dream. For now, we're building a stack that doesn't add to the problem, on hardware that still has the problem, for everyone affected by it. CambiOS: a zero-trust microkernel built with the end in mind -- it boots, loads and runs user-space modules. This is what we've built.</p>
-    <p class="hero-intent">What are we building? Everything that carries us to that end: capabilities shaped for AI-as-infrastructure, IPC for overlay routing, identity for a world without central authority, and UX that flows like current. Our bet is that starting from first principles gets you somewhere retrofitting can't -- sovereign, generative compute that <em>just works</em>.</p>
-    <div class="hero-quote">Computer security requirements have arguably shifted more since the advent of Mythos than in the thirty years before. Legacy OSes -- built on insecure foundations and more often than not quiet data extraction -- can't catch up. CambiOS starts from scratch -- we're giving you back your machine -- to the extent that we can.</div>
+
+    <p class="hero-intent">That's the destination. Today, no shipping general-purpose OS holds together all five of the constraints below. Each was built for a different problem and made different tradeoffs. CambiOS is the bet that the next era needs all five — and that retrofitting won't get there.</p>
+
+    <ul class="hero-constraints">
+      <li><strong>Architecturally enforced security.</strong> A five-job microkernel; everything else in user space; capabilities at every IPC boundary. Security as structure, not policy on top of a permissive substrate.</li>
+      <li><strong>Sovereign identity.</strong> Cryptographic keys, kernel-enforced. No vendor account between you and your machine. No password to phish.</li>
+      <li><strong>Sovereign data.</strong> Content-addressed storage, owned by the principal that created it. No service in the middle scanning, indexing, or reporting.</li>
+      <li><strong>Sovereign network.</strong> An identity-routed overlay where the destination is a public key. Infrastructure can't surveil or redirect what it can't decrypt. <em>(Designed; UDP/IP slice runs today.)</em></li>
+      <li><strong>AI as infrastructure, optional by tier.</strong> Local models supervise verification, behavioral monitoring, and compatibility translation. The kernel runs without any of it on the embedded tier. <em>(Architectural; AI subsystem on roadmap.)</em></li>
+    </ul>
+
+    <p class="hero-intent hero-caveat">All five live in software. The privileged silicon underneath — Intel ME, AMD PSP, Apple Secure Enclave, the TPM stack — is a separate fight, and not one CambiOS pretends to win. For now, the software side has to stop adding to the problem. We'll cross that bridge when we get there.</p>
+
+    <div class="hero-quote">Computer security requirements have shifted more since the advent of <a href="https://www.anthropic.com/glasswing">Mythos</a> than in the thirty years before it. Legacy OSes — built on permissive substrates with telemetry-as-product baked in — can't catch up by patching. CambiOS starts from scratch and gives you back your machine, to the extent that we can.</div>
+
+    <p class="hero-intent">This is what we've built so far.</p>
 
     <div class="status-bar">
       <div class="status-item"><span class="status-dot green"></span> 561 unit tests passing</div>

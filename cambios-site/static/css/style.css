@@ -257,6 +257,41 @@ nav.main-nav a.active {
   max-width: 38rem;
 }
 
+.hero-constraints {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-8) 0 0;
+  max-width: 40rem;
+}
+
+.hero-constraints li {
+  font-size: var(--fs-base);
+  color: var(--fg-1);
+  line-height: var(--lh-body);
+  margin-top: var(--sp-3);
+}
+
+.hero-constraints li:first-child { margin-top: 0; }
+
+.hero-constraints strong {
+  color: var(--fg-0);
+  font-weight: 600;
+}
+
+.hero-constraints em {
+  color: var(--fg-2);
+  font-style: italic;
+}
+
+.hero-intent + .status-bar {
+  margin-top: var(--sp-12);
+}
+
+.hero-caveat {
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+}
+
 /* pill-grid: key facts */
 .pill-grid {
   display: grid;
