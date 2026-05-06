@@ -1,6 +1,7 @@
 ---
 title: "Security"
 url: /docs/security/
+last_synced_to_kernel: 2026-05-04
 ---
 
 # CambiOS Security Architecture

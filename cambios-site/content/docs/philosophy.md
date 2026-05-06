@@ -1,6 +1,7 @@
 ---
 title: "Philosophy"
 url: /docs/philosophy/
+last_synced_to_kernel: 2026-05-04
 ---
 
 ## Sovereign & Generative for Digital Wellbeing

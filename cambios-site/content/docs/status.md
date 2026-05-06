@@ -1,6 +1,7 @@
 ---
 title: "Implementation Status"
 url: /docs/status/
+last_synced_to_kernel: 2026-05-04
 ---
 
 # CambiOS Implementation Status
