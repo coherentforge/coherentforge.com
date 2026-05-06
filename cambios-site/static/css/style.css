@@ -241,6 +241,10 @@ nav.main-nav a.active {
   margin-top: var(--sp-4);
 }
 
+.hero h1 + .hero-intent {
+  margin-top: var(--sp-16);
+}
+
 .hero-intent em {
   color: var(--fg-0);
   font-style: italic;
@@ -290,6 +294,19 @@ nav.main-nav a.active {
 .hero-caveat {
   color: var(--fg-2);
   font-size: var(--fs-sm);
+}
+
+.hero-viz {
+  position: absolute;
+  inset: var(--sp-8) 0 0 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 95%);
+  mask-image: linear-gradient(to bottom, black 50%, transparent 95%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-viz { display: none; }
 }
 
 /* pill-grid: key facts */
