@@ -3,23 +3,27 @@ title: "Security"
 url: /docs/security/
 ---
 
+# CambiOS Security Architecture
 
-This document maps the zero-trust enforcement points in the CambiOS microkernel — *what* is enforced, *where* in the code, and *why*. It is the security-specific reference; project-wide implementation status (what's built vs. designed vs. planned, test counts, phase markers) lives in **[STATUS.md](/docs/status/)**.
+This document maps the zero-trust enforcement points in the CambiOS microkernel — *what* is enforced, *where* in the code, and *why*. It is the security-specific reference; project-wide implementation status (built vs. designed vs. planned, test counts, phase markers) lives in **[Status](/docs/status/)**.
+
+*Last synced to kernel SECURITY.md: 2026-05-04, with corrections applied where the kernel doc lagged STATUS.md (notably Phase 3.4b policy-service per-process allowlists, now shipped).*
 
 **Required reading by topic:**
-- Foundational security *decision* (why capabilities, why zero-trust): [ADR-000](adr/000-zta-and-cap.md)
-- Enforcement *pipeline* decision (why three layers, why this ordering): [ADR-002](adr/002-three-layer-enforcement-pipeline.md)
-- Content-addressed storage and identity: [ADR-003](adr/003-content-addressed-storage-and-identity.md)
-- Cryptographic integrity (signed binaries, signed objects): [ADR-004](adr/004-cryptographic-integrity.md)
-- IPC primitives — control path and bulk-data channels: [ADR-005](adr/005-ipc-primitives-control-and-bulk.md)
-- Policy service — externalized `on_syscall` decisions: [ADR-006](adr/006-policy-service.md)
-- Capability revocation and audit telemetry: [ADR-007](adr/007-capability-revocation-and-telemetry.md)
+
+- Foundational security *decision* (why capabilities, why zero-trust): [ADR-000](/adr/000-zta-and-cap/)
+- Enforcement *pipeline* decision (why three layers, why this ordering): [ADR-002](/adr/002-enforcement-pipeline/)
+- Content-addressed storage and identity: [ADR-003](/adr/003-content-addressed-storage/)
+- Cryptographic integrity (signed binaries, signed objects): [ADR-004](/adr/004-cryptographic-integrity/)
+- IPC primitives — control path and bulk-data channels: [ADR-005](/adr/005-ipc-primitives/)
+- Policy service — externalized `on_syscall` decisions: [ADR-006](/adr/006-policy-service/)
+- Capability revocation and audit telemetry: [ADR-007](/adr/007-capability-revocation/)
 
 ---
 
 ## Enforcement Status Summary
 
-This table maps every enforcement point to its code location and *what* it does. For the project-wide "is X built yet" view, see [STATUS.md § Subsystem status](/docs/status/#subsystem-status).
+This table maps every enforcement point to its code location and *what* it does. For the project-wide "is X built yet" view, see [Status § Subsystem status](/docs/status/#subsystem-status).
 
 | Enforcement Point | Status | Blocks on Failure | Where |
 |---|---|---|---|
@@ -32,7 +36,7 @@ This table maps every enforcement point to its code location and *what* it does.
 | Capability check (IPC send) | **Enforced** | `PermissionDenied` | `ipc/mod.rs` |
 | Capability check (IPC recv) | **Enforced** | `PermissionDenied` | `ipc/mod.rs` |
 | Capability delegation validation | **Enforced** | `AccessDenied` | `ipc/capability.rs` |
-| Interceptor: syscall pre-dispatch | **Scaffolding** (designed in [ADR-006](adr/006-policy-service.md)) | Always allows; policy externalization pending | `syscalls/dispatcher.rs` |
+| Interceptor: syscall pre-dispatch (per-process syscall allowlists) | **Enforced** (Phase 3.4b — policy service decides; kernel acts) | `PermissionDenied` | `syscalls/dispatcher.rs`, `user/policy-service/` |
 | Interceptor: IPC send policy | **Enforced** | `PermissionDenied` | `ipc/mod.rs`, `ipc/interceptor.rs` |
 | Interceptor: IPC recv policy | **Enforced** | `PermissionDenied` | `ipc/mod.rs`, `ipc/interceptor.rs` |
 | Interceptor: delegation policy | **Enforced** | `AccessDenied` | `ipc/capability.rs` |
@@ -41,17 +45,19 @@ This table maps every enforcement point to its code location and *what* it does.
 | ObjPut Ed25519 signature verification | **Enforced** | `PermissionDenied` | `syscalls/dispatcher.rs` (`ObjPutSigned`) |
 | ObjDelete ownership enforcement | **Enforced** | `PermissionDenied` | `syscalls/dispatcher.rs` |
 | FS service principal-based access | **Enforced** | Error response to caller | `user/fs-service/src/main.rs` |
-| Bulk-data channel capability checks | **Designed in [ADR-005](adr/005-ipc-primitives-control-and-bulk.md)**, not implemented | — | — |
-| Capability revocation (`SYS_REVOKE_CAPABILITY`) | **Designed in [ADR-007](adr/007-capability-revocation-and-telemetry.md)**, not implemented | — | — |
-| Audit telemetry channel | **Designed in [ADR-007](adr/007-capability-revocation-and-telemetry.md)**, not implemented | — | — |
-| Externalized policy service | **Designed in [ADR-006](adr/006-policy-service.md)**, not implemented | — | — |
-| Per-process syscall allowlists | **Designed in [ADR-006](adr/006-policy-service.md)**, not implemented | — | — |
-| Runtime behavioral AI (advisory only) | **Designed in [ADR-007](adr/007-capability-revocation-and-telemetry.md)**, not implemented | — | — |
+| Bulk-data channel capability checks | **Enforced** (creator + peer-Principal match at attach) | `ChannelError::*` | `ipc/channel.rs` |
+| Capability revocation (`SYS_REVOKE_CAPABILITY`) | **Enforced** (bootstrap-only authority for now per [ADR-007](/adr/007-capability-revocation/) Phase 3.1) | `PermissionDenied` | `syscalls/dispatcher.rs`, `ipc/capability.rs::revoke` |
+| Audit telemetry channel | **Enforced** (per-CPU SPSC buffers → BSP drain → `AUDIT_RING`; consumer reads via `SYS_AUDIT_ATTACH`/`SYS_AUDIT_INFO`) | N/A (best-effort, drops counted) | `audit/{mod,buffer,drain}.rs`, `syscalls/dispatcher.rs` |
+| Audit on input focus transition (T-7 Phase A) | **Enforced** (compositor emits `InputFocusChange` via `SYS_AUDIT_EMIT_INPUT_FOCUS`; capability narrowed to compositor only) | `PermissionDenied` if non-compositor | `syscalls/dispatcher.rs::handle_audit_emit_input_focus` |
+| Audit drain-skip counter (T-8) | **Enforced** (lock-free `AUDIT_DRAIN_SKIPS` atomic; surfaced through `SYS_AUDIT_INFO` offset 44..48) | N/A (visibility primitive) | `audit/drain.rs`, `syscalls/dispatcher.rs::handle_audit_info` |
+| Audit consumer capability + `audit-tail` | **Enforced** (`CapabilityKind::AuditConsumer` replaces bootstrap-Principal-only check on `SYS_AUDIT_ATTACH`) | `PermissionDenied` | `user/audit-tail/`, [ADR-023](https://github.com/coherentforge/cambios/blob/main/docs/adr/023-audit-consumer-capability.md) |
+| Externalized policy service | **Enforced** (Phase 3.4b — boot module decides syscall allowlists per-process) | `PermissionDenied` if syscall not in profile | `user/policy-service/`, [ADR-006](/adr/006-policy-service/) |
+| Runtime behavioral AI (advisory only) | **Designed in [ADR-007](/adr/007-capability-revocation/)**, not implemented | — | — |
 | Cryptographic capabilities (cross-node) | Planned (post-v1) | — | — |
 
 **Enforced** = real check that returns an error and blocks the operation on failure. **Scaffolding** = hook is wired into the call path but the default policy is permissive (real policy lives in the linked ADR). **Designed** = ADR drafted, code not yet written.
 
-Code line numbers were intentionally removed from this table — they drift on every change. Use grep or your editor's symbol search to find the specific call site within the listed file.
+Code line numbers are intentionally absent from this table — they drift on every change. Use grep or your editor's symbol search to find the specific call site within the listed file. The kernel source is public at [github.com/coherentforge/cambios](https://github.com/coherentforge/cambios).
 
 ---
 
@@ -67,8 +73,8 @@ Process makes SYS_WRITE or SYS_READ syscall
 |  Layer 1: Interceptor pre-dispatch             |
 |  IpcInterceptor::on_syscall()                  |
 |  - Per-process syscall allowlist               |
-|  - Status: SCAFFOLDING (always allows)         |
-|  - File: syscalls/dispatcher.rs:182            |
+|  - Status: ENFORCED (policy service decides)   |
+|  - File: syscalls/dispatcher.rs                |
 +-----------------------------------------------+
     |
     v
@@ -78,7 +84,7 @@ Process makes SYS_WRITE or SYS_READ syscall
 |  - Process must hold correct rights for        |
 |    the target endpoint (SEND or RECV)          |
 |  - Status: ENFORCED                            |
-|  - File: ipc/capability.rs:114-128             |
+|  - File: ipc/capability.rs                     |
 +-----------------------------------------------+
     |
     v
@@ -89,7 +95,7 @@ Process makes SYS_WRITE or SYS_READ syscall
 |  - Payload size limit (256 bytes)              |
 |  - No self-send                                |
 |  - Status: ENFORCED                            |
-|  - File: ipc/interceptor.rs:145-212            |
+|  - File: ipc/interceptor.rs                    |
 +-----------------------------------------------+
     |
     v
@@ -101,9 +107,7 @@ Process makes SYS_WRITE or SYS_READ syscall
 A single capability check would be sufficient if capabilities were the only thing that could go wrong. They aren't:
 
 - **Layer 1** catches a compromised process that tries to invoke syscalls outside its profile. A serial driver that only needs `Write` and `WaitIrq` should never call `Allocate`. Even if it holds capabilities, it shouldn't be making that syscall at all.
-
 - **Layer 2** is the core access control. Capabilities are unforgeable kernel-managed tokens. If you don't hold the right token, the operation fails. This is the load-bearing wall.
-
 - **Layer 3** catches structural violations that capabilities don't address: oversized payloads (buffer overflow prevention), out-of-bounds endpoints (kernel memory safety), self-send (deadlock prevention). These are invariants about the *message*, not the *authority*.
 
 Each layer is independently useful. Together, they make exploitation require three independent bypasses.
@@ -125,9 +129,9 @@ Parse ELF header + collect LOAD segments
 |  BinaryVerifier::verify()                      |
 |  1. Entry point falls within a LOAD segment    |
 |  2. All segments in user space (< canonical)   |
-|  3. No segment is both writable AND executable  |
-|  4. No overlapping segment virtual addresses    |
-|  5. Total memory footprint <= 256 MB            |
+|  3. No segment is both writable AND executable |
+|  4. No overlapping segment virtual addresses   |
+|  5. Total memory footprint <= 256 MB           |
 +-----------------------------------------------+
     |                          |
     | Allow                    | Deny(reason)
@@ -178,7 +182,6 @@ CapabilityRights {
 There are exactly two paths:
 
 1. **SYS_REGISTER_ENDPOINT** — A process registers a new IPC endpoint. The kernel grants the registering process full rights (send + recv + delegate) on that endpoint. This is the only way to create a new capability from nothing.
-
 2. **Delegation** — A process that holds a capability with `delegate = true` can grant a subset of its rights to another process. You cannot delegate more rights than you hold. You cannot delegate without the delegate right.
 
 ### What Prevents Forgery
@@ -209,25 +212,31 @@ Result: B can send to endpoint 5. B cannot delegate further.
 - **Self-delegate.** The interceptor rejects source == target.
 - **Exceed 32 capabilities per process.** The per-process table has a hard limit.
 
+### Formal Backing
+
+CapabilityManager invariants are backed by 12 Kani harnesses (`verification/capability-proofs/`) covering empty-table denial, grant/verify composition, revoke effectiveness, absent-endpoint rejection, rights upgrade, count bound ≤ 32, capacity-full rejection, stale-generation rejection, delegate-without-delegate-right denial, no-rights-escalation, and `revoke_all_for_process` cleanup. The proven source is the same source the kernel compiles — no fork. [ADR-000 § Divergence](/adr/000-zta-and-cap/#divergence) cites these proofs as the formal backing for the capability-soundness claim. The honest gap between proven and aspirational claims is mapped in [verification/CLAIMS.md](https://github.com/coherentforge/cambios/blob/main/verification/CLAIMS.md).
+
 ---
 
-## Identity Enforcement (Phase 0)
+## Identity Enforcement (Phase 0 + 1C)
 
-Cryptographic identity is woven into the kernel's IPC and storage layers. There are no passwords. Every process either has a bound Principal (an Ed25519 public key) or has no identity at all.
+Cryptographic identity is woven into the kernel's IPC and storage layers. There are no passwords. Every process either has a bound Principal or has no identity at all.
 
 ### Principal Binding
 
-A `Principal` is a 32-byte Ed25519 public key bound to a process by the kernel. Binding is restricted:
+A `Principal` is a 32-byte Authentication Identifier (AID) bound to a process by the kernel. Today's instantiation is `algo=Ed25519, hash=blake3(pubkey)` — the algorithm and hash bytes are first-class fields per [ADR-025](/adr/025-principal-as-aid/), so post-quantum migration to Dilithium is a code-only change, not a wire-format change.
 
-- Only a process whose own Principal matches the **bootstrap Principal** can call `SYS_BIND_PRINCIPAL` (syscall 11). All other callers get `PermissionDenied`.
+Binding is restricted:
+
+- Only a process whose own Principal matches the **bootstrap Principal** can call `SYS_BIND_PRINCIPAL`. All other callers get `PermissionDenied`.
 - A process can be bound at most once. Double-bind attempts are rejected.
 - Kernel processes 0–2 are bound to the bootstrap Principal at boot.
 
-The bootstrap Principal's public key is compiled into the kernel from `bootstrap_pubkey.bin`, extracted from the signing YubiKey. The private key lives exclusively on the hardware YubiKey — it never enters kernel memory. Boot modules are signed at build time by the YubiKey via the `sign-elf` tool's OpenPGP smart card interface.
+The bootstrap Principal's public key is compiled into the kernel from `bootstrap_pubkey.bin`, extracted from the signing YubiKey. The private key lives exclusively on the hardware YubiKey — it never enters kernel memory. Boot modules are signed at build time by the YubiKey via the `sign-elf` tool's OpenPGP smart-card interface.
 
 ### IPC Sender Identity (Unforgeable)
 
-Every IPC message carries a `sender_principal` field. This field is **set by the kernel** in `send_message_with_capability()` at ipc/mod.rs:586, not by user code. User-space cannot write to this field — any value it sets is overwritten before the message is enqueued.
+Every IPC message carries a `sender_principal` field. The kernel **transcribes** this from the caller's bound Principal — it does not interpret it. Per [ADR-026](/adr/026-identity-transcription/), the kernel reads the Principal AID, copies it onto the outgoing message, and never branches on the AID *value* to make a policy decision. User-space cannot write to this field — any value it sets is overwritten before the message is enqueued.
 
 ```
 Process A calls SYS_WRITE → kernel IPC path:
@@ -238,7 +247,11 @@ Process A calls SYS_WRITE → kernel IPC path:
   5. Message enqueued with unforgeable identity
 ```
 
-The receiving process (via `SYS_RECV_MSG`, syscall 13) gets the 32-byte `sender_principal` prepended to the payload. It can verify who sent the message without trusting the sender's self-identification.
+The receiving process gets the 32-byte `sender_principal` prepended to the payload. It can verify who sent the message without trusting the sender's self-identification.
+
+### Multi-Principal Vault
+
+Plurality lives in userspace. The kernel keeps `Principal` singular and atomic per process; the userspace vault service ([ADR-026](/adr/026-identity-transcription/) + [identity Phase 1C](/docs/identity/)) lets a human hold multiple Principals (e.g., `social_Principal`, `banking_Principal`, `dev_Principal`) and select which one a given process spawns under. AI sandboxes are per-Principal: a compromised `social_Principal` does not take down `banking_Principal`.
 
 ### What Identity Prevents
 
@@ -247,50 +260,47 @@ The receiving process (via `SYS_RECV_MSG`, syscall 13) gets the 32-byte `sender_
 | Process claims to be another identity | Kernel stamps real Principal | Forgery impossible |
 | Unauthorized process binds identities | Only bootstrap Principal can call BindPrincipal | `PermissionDenied` |
 | Process reads another's identity | GetPrincipal returns caller's own | No cross-process read |
+| Cross-Principal containment | AI flags `Principal_X`; policy narrows `Principal_X` only | Other vaulted Principals unaffected |
 
 ---
 
-## ObjectStore Enforcement (Phase 0)
+## ObjectStore Enforcement (Phase 0 + 4b)
 
-CambiOS storage is content-addressed signed objects, not files-at-paths. The `ObjectStore` is the kernel's storage primitive; the FS service is a user-space gateway to it.
+CambiOS storage is content-addressed signed objects, not files-at-paths. The `ObjectStore` is the kernel's storage primitive; the FS service is a user-space gateway to it. As of Phase 4b, the store is disk-backed (virtio-blk) and objects survive reboot.
 
 ### Ownership Model
 
 Every `CambiObject` has an immutable **author** (who created it) and a transferable **owner** (who controls it). The kernel enforces ownership on destructive operations:
 
-- **ObjPut** (syscall 14): The caller's Principal becomes the author and owner. Content is hashed (Blake3) and stored. Returns the 32-byte content hash.
-- **ObjGet** (syscall 15): Any process can read by hash. No ownership check on read (content-addressed data is inherently shareable).
-- **ObjDelete** (syscall 16): The kernel verifies the caller's Principal matches the object's owner at dispatcher.rs:939. Non-owners get `PermissionDenied`.
-- **ObjList** (syscall 17): Lists all hashes. No access restriction (hashes are not secrets — the content they reference may be).
+- **ObjPut**: The caller's Principal becomes the author and owner. Content is hashed (Blake3) and stored. Returns the 32-byte content hash.
+- **ObjGet**: Any process can read by hash. No ownership check on read (content-addressed data is inherently shareable).
+- **ObjDelete**: The kernel verifies the caller's Principal matches the object's owner. Non-owners get `PermissionDenied`.
+- **ObjList**: Lists all hashes. No access restriction (hashes are not secrets — the content they reference may be).
 
 ### FS Service (User-Space Enforcement Layer)
 
-The FS service (`user/fs-service/`) runs as a user-space process on IPC endpoint 16. It adds an additional enforcement layer on top of the kernel's ObjectStore syscalls:
+The FS service runs as a user-space process on IPC endpoint 16. It adds a defense-in-depth layer on top of the kernel's ObjectStore syscalls:
 
-- Receives messages via `SYS_RECV_MSG`, which includes the kernel-stamped `sender_principal`
-- DELETE commands check that `sender_principal` is non-zero (anonymous callers rejected) at fs-service/src/main.rs:218
-- Delegates to kernel ObjDelete, which does the real ownership check
+- Receives messages via `SYS_RECV_MSG`, which includes the kernel-stamped `sender_principal`.
+- `DELETE` commands check that `sender_principal` is non-zero (anonymous callers rejected).
+- Delegates to kernel `ObjDelete`, which does the authoritative ownership check.
 
-This is defense-in-depth: the FS service rejects obviously unauthorized requests before they reach the kernel, and the kernel enforces the authoritative ownership check.
+The FS service rejects obviously unauthorized requests before they reach the kernel; the kernel enforces the real ownership check.
 
 ---
 
 ## Interceptor Details
 
-The `IpcInterceptor` trait defines four hooks. The `DefaultInterceptor` provides baseline policy. Custom interceptors can be substituted for stricter enforcement.
+The `IpcInterceptor` trait defines four hooks. The default backend is the policy service ([ADR-006](/adr/006-policy-service/)); custom backends can be substituted.
 
 ### Hook: on_syscall (Layer 1)
 
-**Current status: Scaffolding.** Always returns `Allow`.
-
-This hook fires before the syscall dispatcher routes to a handler. It receives the caller's process ID and the syscall number. The intended use is per-process syscall allowlists:
+**Current status: Enforced (Phase 3.4b).** The policy service holds per-process syscall allowlists and answers the kernel's "is process P allowed to call syscall N?" query through a fast per-CPU cache. A process that attempts a syscall outside its profile gets `PermissionDenied` before any work happens.
 
 ```
-Serial driver profile: [Write, WaitIrq, Yield, GetPid]
+Serial driver profile:     [Write, WaitIrq, Yield, GetPid]
 Filesystem driver profile: [Read, Write, Allocate, Free, RegisterEndpoint, Yield]
 ```
-
-A process that attempts a syscall outside its profile gets `PermissionDenied` before any work happens. The hook is wired at `dispatcher.rs:182` — only the policy logic is missing.
 
 ### Hook: on_send (Layer 3)
 
@@ -315,59 +325,50 @@ A process that attempts a syscall outside its profile gets `PermissionDenied` be
 
 ### Substituting a Custom Interceptor
 
-The interceptor is a trait object (`Box<dyn IpcInterceptor>`). At boot, `main.rs` installs the `DefaultInterceptor`. A production deployment could install a stricter interceptor that:
+The interceptor is held as `IpcInterceptorBackend` — an enum-dispatch shim ([ADR-002 § Divergence](/adr/002-enforcement-pipeline/#divergence)) chosen over `Box<dyn IpcInterceptor>` so dispatch monomorphizes (no dynamic dispatch in the kernel hot path). At boot, `main.rs` installs the policy-service-backed variant. Adding a new interceptor implementation means adding a variant to the enum and an arm to the impl; the swap site is one line.
 
-- Reads per-process syscall profiles from a policy table
-- Logs all capability exercises to an audit buffer
-- Connects to the AI security engine for behavioral analysis
-- Enforces rate limits on IPC send frequency
-
-The swap is a single line: `ipc.set_interceptor(Box::new(MyInterceptor::new()))`.
+A production deployment's interceptor could read per-process syscall profiles from a richer policy table, log all capability exercises to a separate audit channel, connect to the AI security service for behavioral analysis, or enforce rate limits on IPC send frequency.
 
 ---
 
-## Bulk-Data Channels (Phase 3 — Designed)
+## Bulk-Data Channels (Phase 3.2d — Shipped)
 
-The 256-byte fixed control IPC is *not* the data plane. Bulk data (video frames, file blocks, LLM token streams) needs a separate primitive: shared-memory **channels**, designed in [ADR-005](adr/005-ipc-primitives-control-and-bulk.md). Channels are a security-relevant addition because they introduce the first IPC path the kernel does *not* read byte-for-byte. The security model must hold without that read.
-
-How the model still holds:
+The 256-byte fixed control IPC is *not* the data plane. Bulk data (video frames, file blocks, LLM token streams) needs a separate primitive: shared-memory **channels**, designed in [ADR-005](/adr/005-ipc-primitives/) and shipped in Phase 3.2d. Channels are a security-relevant addition because they introduce the first IPC path the kernel does *not* read byte-for-byte. The security model still holds:
 
 - **Channel creation is a control-IPC operation.** `SYS_CHANNEL_CREATE` is mediated by the kernel and gated by capabilities. A process cannot conjure a channel into existence — it must hold the right to ask the kernel to create one between two consenting endpoints.
 - **Capabilities, not pointers.** A `ChannelCapability` is a kernel-managed token. The mapped pages are only accessible to processes that hold a capability for that channel. There is no "anyone with the address can read it" semantic.
 - **Notification still goes through control IPC.** The producer writes data into the shared ring, then sends a small "data ready" message through the existing 256-byte IPC path. The kernel still sees the notification, still stamps `sender_principal` on it, still runs the interceptor. The bulk data is the payload of the *transaction*, but the *transaction itself* is still kernel-mediated.
-- **Channels are revocable.** `SYS_CHANNEL_REVOKE` (paired with the capability revocation primitive in [ADR-007](adr/007-capability-revocation-and-telemetry.md)) tears down the shared mapping and any in-flight references. A compromised process loses its data plane the same way it loses its control plane.
-- **The kernel can still observe.** Audit telemetry ([ADR-007](adr/007-capability-revocation-and-telemetry.md)) records channel create/attach/close/revoke events. The AI never sees the bytes flowing through a channel; it sees that two services have a channel, how often it's used, and whether the topology is anomalous. *The AI watches; it does not decide.*
+- **Channels are revocable.** `SYS_CHANNEL_REVOKE` (paired with the capability revocation primitive in [ADR-007](/adr/007-capability-revocation/)) tears down the shared mapping and any in-flight references. A compromised process loses its data plane the same way it loses its control plane.
+- **The kernel can still observe.** Audit telemetry records channel create/attach/close/revoke events. The AI never sees the bytes flowing through a channel; it sees that two services have a channel, how often it's used, and whether the topology is anomalous. *The AI watches; it does not decide.*
 
 What channels do *not* change: the verification stance for control-path messages (256 bytes, fixed, kernel reads every byte), the capability model, the three-layer enforcement pipeline, or `sender_principal` stamping. Channels are an *additional* primitive, not a replacement.
 
 ---
 
-## Externalized Policy and Audit Telemetry (Phase 3 — Designed)
+## Externalized Policy and Audit Telemetry (Phase 3 — Shipped)
 
-Two architectural moves currently in design phase shift how security policy is decided and observed without changing what the kernel enforces:
+Three architectural moves shift how security policy is decided and observed without changing what the kernel enforces. All three have shipped:
 
-**Policy externalization ([ADR-006](adr/006-policy-service.md)).** The `IpcInterceptor::on_syscall` hook is currently scaffolding inside the kernel. The plan is to move the *decision* into a user-space `policy-service` while keeping the *enforcement* in the kernel. The kernel asks "is process P allowed to call syscall N with these args?" via a fast per-CPU cache; the policy service answers and the kernel acts. Cache invalidation, fail-open semantics on policy-service crash, and a bootstrap order that allows the policy service to load *before* it gates other services are all spelled out in the ADR. Critically: the AI is never the policy service. The policy service is deterministic Rust code; the AI is an *advisor* that can recommend changes to policy-service rules through its own audit channel. The AI watches, the policy service decides, the kernel enforces.
+**Capability revocation ([ADR-007](/adr/007-capability-revocation/)).** `SYS_REVOKE_CAPABILITY` lives in `syscalls/dispatcher.rs`, backed by `CapabilityManager::revoke` with audit emission. Authority is bootstrap-only in Phase 3.1; the broader authority surface called for in ADR-007 (original grantor, holders of the new `revoke` right, the policy service) is queued for post-v1. Atomic teardown of in-flight references is in place via the existing channel close path + capability table mutation. This was the prerequisite for everything else in Phase 3 — without revocation, the AI's recommendations would have no teeth and the policy service could only deny *new* operations, never undo prior grants.
 
-**Audit telemetry ([ADR-007](adr/007-capability-revocation-and-telemetry.md)).** Every capability grant, revocation, IPC denial, channel create/attach/close, identity bind, and ObjectStore mutation produces an audit event. Events flow through a kernel→userspace channel (using the channel primitive from ADR-005) to a user-space audit consumer. Per-CPU lock-free staging buffers keep the kernel hot path off the audit path. Best-effort delivery: dropped events are counted, never block the producer. The audit channel is the *only* way the AI security service learns what's happening on the system — there is no kernel hook the AI can call directly, no capability the AI holds to suspend a process, no out-of-band introspection. The AI is a user-space process that reads an event stream and emits recommendations into the policy service's input queue.
+**Audit telemetry ([ADR-007](/adr/007-capability-revocation/)).** Capability grant / revocation / denial, IPC send/recv (sampled), channel create/attach/close, syscall denial, binary load/reject, process create/exit, and (T-7 Phase A) input focus transitions all produce audit events. Events flow through per-CPU lock-free SPSC staging buffers → BSP-driven `drain_tick` → a global `AUDIT_RING`. User-space consumers attach via `SYS_AUDIT_ATTACH` (gated by the [ADR-023](https://github.com/coherentforge/cambios/blob/main/docs/adr/023-audit-consumer-capability.md) `AuditConsumer` capability — no longer bootstrap-only) and read offsets via `SYS_AUDIT_INFO`. Best-effort delivery: dropped events are counted both per-buffer and at drain time (T-8 `AUDIT_DRAIN_SKIPS` lock-free counter). The audit channel is the *only* way the AI security service learns what's happening on the system — there is no kernel hook the AI can call directly, no capability the AI holds to suspend a process, no out-of-band introspection. The AI is a user-space process that reads an event stream and emits recommendations into the policy service's input queue.
 
-**Capability revocation ([ADR-007](adr/007-capability-revocation-and-telemetry.md)).** Currently a capability granted in error cannot be taken back. The revocation primitive adds `SYS_REVOKE_CAPABILITY` and atomic teardown of all references (in-flight messages, blocked receivers, channel mappings). Three authorities can revoke: the original grantor, any process holding the new `revoke` right on the capability, and the bootstrap Principal (which the policy service can be granted). This is the prerequisite for everything else in Phase 3 — without revocation, the AI's recommendations have no teeth and the policy service can only deny *new* operations, never undo prior grants.
+**Policy externalization ([ADR-006](/adr/006-policy-service/)).** Phase 3.4b shipped: the `IpcInterceptor::on_syscall` hook routes through the user-space `policy-service` boot module, which holds per-process syscall allowlists. The kernel asks "is process P allowed to call syscall N?" via a fast per-CPU cache; the policy service answers and the kernel acts. Cache invalidation, fail-open semantics on policy-service crash, and the bootstrap order that lets the policy service load *before* it gates other services are spelled out in the ADR. **Critically: the AI is never the policy service.** The policy service is deterministic Rust code. The AI is an *advisor* that can recommend changes to policy-service rules through its own audit channel. The AI watches, the policy service decides, the kernel enforces.
 
 ---
 
 ## Gap Analysis
 
-The gaps below are organized by whether they have a design (ADR drafted) or are still open questions. Implementation status of each item lives in [STATUS.md](/docs/status/).
+The gaps below are organized by whether they have a design (ADR drafted) or are still open questions. Implementation status of each item lives in [Status](/docs/status/).
 
-### Designed, Implementation Pending (Phase 3)
+### Designed, Implementation Pending
 
 | Gap | Impact | Where It's Designed |
 |---|---|---|
-| **Capability revocation** | A capability granted in error cannot be taken back; driver updates can't reclaim the old driver's authority | [ADR-007](adr/007-capability-revocation-and-telemetry.md) |
-| **Audit logging / telemetry channel** | No forensic trail; the AI security service has no input stream | [ADR-007](adr/007-capability-revocation-and-telemetry.md) |
-| **Per-process syscall allowlists** | A compromised process can invoke any syscall it has arguments for | [ADR-006](adr/006-policy-service.md) — `on_syscall` hook routed through policy service |
-| **Externalized policy decisions** | All policy lives inside the kernel; cannot be updated without a kernel rebuild | [ADR-006](adr/006-policy-service.md) |
-| **Bulk-data IPC path** | 256-byte control IPC blocks workloads like video, file I/O, LLM streaming; today's drivers paper over with chunking | [ADR-005](adr/005-ipc-primitives-control-and-bulk.md) |
-| **Runtime behavioral AI (advisory)** | No detection of anomalous capability usage patterns | [ADR-007](adr/007-capability-revocation-and-telemetry.md) — AI consumes the audit channel, recommends to policy service, never decides directly |
+| **Capability revocation — broader authority** | Today only the bootstrap Principal can call `SYS_REVOKE_CAPABILITY`. ADR-007 calls for the original grantor, any process holding the new `revoke` right, and the policy service to also be able to revoke; that authority surface is queued for post-v1. | [ADR-007](/adr/007-capability-revocation/) |
+| **Runtime behavioral AI (advisory)** | No detection of anomalous capability usage patterns | [ADR-007](/adr/007-capability-revocation/) — AI consumes the audit channel, recommends to policy service, never decides directly |
+| **Privileged audit consumer (T-7 / T-8)** | The audit ring + drain-skip counter ship today, but no kernel-side actor polls them and escalates on rising skip counts. | [threat-model.md T-7 / T-8](https://github.com/coherentforge/cambios/blob/main/docs/threat-model.md) — likely a small `audit-health` boot module or a policy-service responsibility |
+| **Service clusters** | Per-channel revoke is finer-grained than the dependency unit (e.g., compositor + scanout + virtio-input + libgui clients act as one rendering limb). | [ADR-027](/adr/027-service-clusters/) — kernel-ABI cluster handle + lock-hierarchy placement spelled out |
 
 ### Open / Not Yet Designed
 
@@ -375,26 +376,34 @@ The gaps below are organized by whether they have a design (ADR drafted) or are 
 |---|---|---|
 | **ObjGet access control** | Any process can read any object by hash | Hashes are not secrets, so this is not strictly a defect — but per-object ACLs may be wanted for sensitive content. ObjectStore already has the `ObjectCapSet` field; needs an enforcement story. |
 | **Capability expiry / TTL** | Granted capabilities last forever unless revoked | Add TTL field to `Capability`, check in `verify_access()`. Useful for short-lived delegations (e.g., "let this one binary read this one file"). |
-| **IPC rate limiting** | No defense against IPC flooding DoS | `on_send` hook — track send count per process per interval. Becomes more important once channels exist (ADR-005), since channels open a path the kernel *doesn't* per-byte inspect. |
+| **IPC rate limiting** | No defense against IPC flooding DoS | `on_send` hook — track send count per process per interval. Becomes more important now that channels exist, since channels open a path the kernel *doesn't* per-byte inspect. |
 | **Cryptographic capabilities** | Capabilities don't work across networked CambiOS nodes | Replace kernel tables with signed tokens. Only matters once Yggdrasil mesh networking lands; not a v1 concern. |
 
 ### Done (Historical)
 
 - ~~**Bootstrap Principal hardening**~~ — Hardware-backed YubiKey root of trust. Secret key never enters kernel memory. Boot modules signed at build time, verified at load time.
 - ~~**ELF signature verification**~~ — `SignedBinaryVerifier` enforces Ed25519 signatures (ARCSIG trailer) on all boot modules.
-- ~~**IPC sender_principal stamping**~~ — Kernel stamps unforgeable identity on every control-IPC message.
+- ~~**ELF page-permission conflict rejection (T-5)**~~ — `DefaultVerifier` rejects any pair of `PT_LOAD` segments whose page-aligned ranges overlap with conflicting permissions. Closes the build-time hygiene gap that signed binaries could otherwise sneak through.
+- ~~**IPC sender_principal stamping**~~ — Kernel stamps unforgeable identity on every control-IPC message; transcribe-not-interpret invariant codified in [ADR-026](/adr/026-identity-transcription/).
+- ~~**Principal as 32-byte AID**~~ — Per [ADR-025](/adr/025-principal-as-aid/), Principal carries algorithm and hash bytes as first-class fields. PQ migration is a code-only change.
+- ~~**Capability revocation primitive**~~ — `SYS_REVOKE_CAPABILITY` ships with bootstrap-only authority for Phase 3.1 (broader authority queued — see Gap Analysis above).
+- ~~**Audit telemetry channel**~~ — Per-CPU lock-free SPSC staging buffers + BSP-driven `drain_tick` → `AUDIT_RING` consumer. Best-effort delivery: drops are counted both per-buffer and at drain time.
+- ~~**Audit consumer capability**~~ — Per [ADR-023](https://github.com/coherentforge/cambios/blob/main/docs/adr/023-audit-consumer-capability.md), `AuditConsumer` cap replaces the bootstrap-Principal-only check on `SYS_AUDIT_ATTACH`. Signed `audit-tail` boot module attaches and prints `did:key:z6Mk…` summaries to serial.
+- ~~**Bulk-data shared-memory channels**~~ — `SYS_CHANNEL_CREATE` / `SYS_CHANNEL_ATTACH` / `SYS_CHANNEL_REVOKE` ship per [ADR-005](/adr/005-ipc-primitives/). Kernel-mediated creation, capability-gated allocation, peer-Principal match at attach.
+- ~~**Externalized policy service**~~ — Phase 3.4b: per-process syscall allowlists decided by the user-space `policy-service` boot module, with kernel enforcement.
 
 ### Priority Order for Phase 3
 
-The Phase 3 items have a forced ordering, captured in [STATUS.md § Phase markers](/docs/status/#phase-markers):
+Items 1–4 below have shipped (see "Done (Historical)"); items 5–6 are what's left, in dependency order. Tracked alongside the project-wide phase markers in [Status](/docs/status/#roadmap).
 
-1. **Capability revocation** — every other Phase 3 item depends on this. Channels need it (to tear down a compromised attach), policy service needs it (so its decisions can have effect on existing capabilities), audit telemetry doesn't strictly need it but is useless without it.
-2. **Audit telemetry channel** — precedes the AI work because the AI consumes this stream.
-3. **Channels** — bulk-data path. Unblocks DHCP, real video/audio, LLM serving.
-4. **Policy service** — externalizes `on_syscall` once revocation exists to give policy decisions their teeth.
-5. **Behavioral AI** — sits on top of all four. Watches the audit channel, emits recommendations into the policy service's input.
+1. ~~**Capability revocation** — every other Phase 3 item depended on this.~~ Shipped.
+2. ~~**Audit telemetry channel.**~~ Shipped.
+3. ~~**Channels — bulk-data path.**~~ Shipped.
+4. ~~**Policy service** — externalized syscall allowlists.~~ Shipped (Phase 3.4b).
+5. **Privileged audit consumer.** The audit ring + drain-skip counter are observable but nothing kernel-side polls them and escalates. Required for T-7 / T-8 to graduate from "visibility" to "structural defense."
+6. **Behavioral AI.** Sits on top of policy + audit consumer. Watches the audit channel, emits recommendations into the policy service's input.
 
-For test coverage of the currently-enforced security points, see [STATUS.md § Test coverage](/docs/status/#test-coverage).
+For test coverage of the currently-enforced security points, see [Status § Test coverage](/docs/status/#test-coverage).
 
 ---
 
@@ -403,19 +412,12 @@ For test coverage of the currently-enforced security points, see [STATUS.md § T
 These properties must hold after every change to security-related code:
 
 1. **No binary runs without verification.** Every path from raw bytes to executing code passes through `BinaryVerifier::verify()`.
-
 2. **No IPC without capability.** Every `send_message` and `recv_message` passes through `verify_access()`. There is no "internal" send that skips the check.
-
 3. **No delegation without authorization.** `can_delegate()` enforces that the source holds the delegate right and is not escalating beyond its own rights.
-
 4. **Interceptor is not optional.** The interceptor is set at boot and cannot be removed at runtime. Every IPC operation passes through it. The interceptor and capability check are independent — bypassing one does not bypass the other.
-
 5. **Verification before allocation.** The ELF verifier runs before any frame allocation, page mapping, or process creation. A denied binary consumes zero resources.
-
 6. **Deny by default.** A new process holds zero capabilities. It cannot do anything until explicitly granted access.
-
 7. **Sender identity is unforgeable.** The kernel stamps `msg.sender_principal` in the IPC send path. User-space values are overwritten. A receiving process can trust `sender_principal` as kernel-attested.
-
 8. **Only bootstrap can bind identity.** `SYS_BIND_PRINCIPAL` checks the caller's Principal against `BOOTSTRAP_PRINCIPAL`. No other process can assign identities, even if it holds all IPC capabilities.
-
 9. **Only owners can delete objects.** `SYS_OBJ_DELETE` verifies the caller's Principal matches the object's `owner` field. This is enforced in the kernel, not just in user-space services.
+10. **Kernel transcribes identity, never interprets.** Per [ADR-026](/adr/026-identity-transcription/), kernel code reads a Principal AID and copies it onto outgoing IPC, authored objects, and audit events; it never branches on the AID *value* to make a policy decision. AI watches, flags, and sandboxes — but does not write policy.
