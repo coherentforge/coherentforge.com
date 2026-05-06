@@ -33,13 +33,10 @@
 
   function buildNodes() {
     nodes = [];
-    const cols = Math.max(8, Math.floor(W / nodeSpacing));
-    const rows = Math.max(8, Math.floor(H / nodeSpacing));
-    const xStep = W / cols;
-    const yStep = H / rows;
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        nodes.push({ x: x * xStep + xStep/2, y: y * yStep + yStep/2, light: 0 });
+    const start = nodeSpacing / 2;
+    for (let y = start; y < H; y += nodeSpacing) {
+      for (let x = start; x < W; x += nodeSpacing) {
+        nodes.push({ x, y, light: 0 });
       }
     }
   }
@@ -111,11 +108,6 @@
         ctx.fillStyle = `rgba(${ACCENT_RGB[0]},${ACCENT_RGB[1]},${ACCENT_RGB[2]},${alpha})`;
         ctx.beginPath();
         ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.fillStyle = `rgba(${FG_DIM_RGB[0]},${FG_DIM_RGB[1]},${FG_DIM_RGB[2]},0.06)`;
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, 0.5, 0, Math.PI * 2);
         ctx.fill();
       }
     }

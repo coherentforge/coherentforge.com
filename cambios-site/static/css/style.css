@@ -305,6 +305,21 @@ nav.main-nav a.active {
   mask-image: linear-gradient(to bottom, black 50%, transparent 95%);
 }
 
+.hero-viz::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(124, 130, 144, 0.06) 1px, transparent 1.5px);
+  background-size: 12px 12px;
+  background-position: 6px 6px;
+  pointer-events: none;
+  animation: hero-viz-static-fade 1.5s ease-out 10s forwards;
+}
+
+@keyframes hero-viz-static-fade {
+  to { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-viz { display: none; }
 }
