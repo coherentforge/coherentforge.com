@@ -1,10 +1,10 @@
 ---
 title: "Governance"
 url: /docs/governance/
+last_synced_to_kernel: 2026-05-04
 ---
 
-
-> This document describes how CambiOS is run — who decides what, how funding works, how contributors engage, and what commitments the project makes about its own integrity. It is not an architecture document. [ADR-009](adr/009-purpose-tiers-scope.md) describes what CambiOS *is*. This document describes how CambiOS is *maintained*.
+> This document describes how CambiOS is run — who decides what, how funding works, how contributors engage, and what commitments the project makes about its own integrity. It is not an architecture document. [ADR-009](/adr/009-purpose-tiers-scope/) describes what CambiOS *is*. This document describes how CambiOS is *maintained*.
 
 ## Why This Document Exists
 
@@ -38,7 +38,7 @@ Some funding arrangements would compromise the project's ability to build what i
 
 - **Funding that includes export control, contributor background check, or classified-information requirements.** These are incompatible with an openly developed global contributor community. The project welcomes contributions based on technical merit without restrictions on who contributors are.
 - **Funding that requires non-disclosure of the funding's existence or terms.** The project commits to transparency about where its money comes from, and any arrangement that would prevent that transparency is declined.
-- **Funding contingent on directional influence.** The project accepts contracts that fund work it would do anyway; it does not accept funding that pays to direct the architecture toward outcomes the project would not otherwise pursue. The test is whether the work aligns with the published roadmap and the commitments in [ADR-009](adr/009-purpose-tiers-scope.md).
+- **Funding contingent on directional influence.** The project accepts contracts that fund work it would do anyway; it does not accept funding that pays to direct the architecture toward outcomes the project would not otherwise pursue. The test is whether the work aligns with the published roadmap and the commitments in [ADR-009](/adr/009-purpose-tiers-scope/).
 - **Funding from sources whose business model is fundamentally at odds with the project's purpose statements** — most notably, platform companies whose primary revenue comes from data collection and surveillance advertising. The project is not positioned against those companies; it simply cannot build a credible privacy-respecting OS while being funded by the opposite of that.
 - **Funding from government research programs whose procurement and disclosure frameworks would constrain the project's openness.** The project acknowledges that these agencies have previously funded valuable open-source work, including in areas directly adjacent to CambiOS's technical goals. The project's preference to not pursue this category of funding is not a judgment about past recipients; it reflects the project's commitment to a uniform, transparent, openly-developed codebase that serves users without distinction. Programs that come with classification requirements, US-person-only contributor rules, or directional obligations would compromise that uniformity, and the project declines the tradeoff even where the technical benefits would be real.
 
@@ -50,7 +50,7 @@ Funding sources are published in this repository when they exist. Individual don
 
 CambiOS welcomes contributions from anyone. Technical merit and alignment with the project's purpose statements are the basis for accepting contributions; the identity, nationality, or affiliation of the contributor is not. The project does not require background checks, citizenship restrictions, or copyright assignment. Contributors retain copyright to their work, which is released under the project's open-source license.
 
-Contributors are expected to engage honestly with technical discussion and to follow the project's architectural commitments ([ADR-009](adr/009-purpose-tiers-scope.md), related ADRs, and [CLAUDE.md](/docs/status/)) when submitting work. Disagreement with architectural decisions is welcome and is the normal way the project evolves; subverting decisions through code submission is not.
+Contributors are expected to engage honestly with technical discussion and to follow the project's architectural commitments ([ADR-009](/adr/009-purpose-tiers-scope/), related ADRs, and the kernel-side [CLAUDE.md](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md)) when submitting work. Disagreement with architectural decisions is welcome and is the normal way the project evolves; subverting decisions through code submission is not.
 
 The project does not accept contributions that come with employment-derived restrictions on the resulting work. A contributor whose employer has sponsored their time is welcome, and the contribution is evaluated on its own technical terms. If a contributor is unable to release their work under the project's license because of external constraints, the contribution is declined.
 
@@ -60,7 +60,7 @@ CambiOS makes several commitments at the architectural level that this document 
 
 - **No telemetry subsystem.** The software does not report back to the project, to any vendor, or to any third party. This is enforced structurally — there is no telemetry subsystem to compromise because there is no telemetry subsystem.
 - **No remote access mechanism that bypasses the capability model.** Every access to every resource goes through the capability check path. There are no "emergency" channels, no "debug" backdoors, and no administrative overrides that work without the user's explicit action.
-- **No hidden logging.** Audit information is recorded through the [ADR-007](adr/007-capability-revocation-and-telemetry.md) telemetry channel, which is visible to the user through the policy service. The project commits that no kernel or core-service component records information outside that channel.
+- **No hidden logging.** Audit information is recorded through the [ADR-007](/adr/007-capability-revocation/) telemetry channel, which is visible to the user through the policy service. The project commits that no kernel or core-service component records information outside that channel.
 - **Strong cryptographic primitives, no intentional weakening.** The project uses well-established cryptographic primitives and does not add backdoors, key escrow, or reduced-strength modes. Any future change to a cryptographic primitive is documented in an ADR with explicit reasoning.
 - **Canonical builds match public source.** The signed canonical build of CambiOS is reproducible from the public source tree. The project does not ship components that are not in the public tree, and does not apply modifications to the canonical build that are not visible to anyone auditing the source.
 
@@ -77,7 +77,7 @@ CambiOS is in its early phase and decision-making authority rests with the proje
 As the project grows to a community of core contributors, governance transitions to a model with these properties:
 
 - **Technical decisions** are made by consensus among core contributors, with disagreement resolved through discussion and, where needed, explicit votes. Major architectural decisions continue to be documented as ADRs.
-- **The commitments in [ADR-009](adr/009-purpose-tiers-scope.md) and this document** require supermajority agreement among core contributors to change. They are deliberately harder to change than individual architectural decisions because they are load-bearing for the project's identity.
+- **The commitments in [ADR-009](/adr/009-purpose-tiers-scope/) and this document** require supermajority agreement among core contributors to change. They are deliberately harder to change than individual architectural decisions because they are load-bearing for the project's identity.
 - **Funding decisions** require consensus among core contributors and follow the commitments above.
 - **Contributor conduct issues** are handled by a subset of core contributors designated for that purpose, following a documented process.
 
@@ -93,14 +93,16 @@ If the project's current leader becomes unable to continue (illness, death, or v
 
 ## Open-Source Status
 
-CambiOS is developed in an open repository under a permissive license (Apache 2.0, MIT, or a combination — finalized before the first canonical release). Open development is load-bearing for the project's trust model: users can audit the code, contributors can inspect the architecture, and the project's commitments are verifiable rather than merely stated.
+CambiOS is developed in an open repository under copyleft licenses chosen to keep modifications open while leaving room for proprietary applications above the platform: **kernel, services, and first-party apps under [AGPL-3.0-or-later](/docs/license/)**, and **`libsys` (the userspace ABI/syscall library) under [MPL-2.0](/docs/license/)**. The split is deliberate — AGPL on the platform keeps improvements to CambiOS itself flowing back to the commons, while MPL on `libsys` lets third-party applications link against the syscall surface without the AGPL boundary spreading into their code. Open development is load-bearing for the project's trust model: users can audit the code, contributors can inspect the architecture, and the project's commitments are verifiable rather than merely stated.
 
-The project's default is open source and expects to stay that way indefinitely. The license is chosen to maximize user freedom and minimize friction for adoption.
+The project's default is open source and expects to stay that way indefinitely. The repository is public at [github.com/coherentforge/cambios](https://github.com/coherentforge/cambios).
 
 ## Cross-References
 
-- [CambiOS.md](/docs/architecture/) — Source-of-truth architecture document.
-- [ADR-009](adr/009-purpose-tiers-scope.md) — Purpose, deployment tiers, and scope boundaries.
-- [PHILOSOPHY.md](/docs/philosophy/) — Project philosophy and values.
-- [SECURITY.md](/docs/security/) — Security posture and threat model.
-- [CLAUDE.md](/docs/status/) — Kernel technical reference and contributor conventions.
+- [Architecture](/docs/architecture/) — Long-form architecture document.
+- [ADR-009](/adr/009-purpose-tiers-scope/) — Purpose, deployment tiers, and scope boundaries (the formal, citeable version of "what CambiOS *is*").
+- [Philosophy](/docs/philosophy/) — Project philosophy and values.
+- [Security](/docs/security/) — Security posture and enforcement status.
+- [Status](/docs/status/) — What is currently built vs. designed vs. planned.
+- [License](/docs/license/) — Full SPDX breakdown and rationale.
+- [CLAUDE.md (kernel repo)](https://github.com/coherentforge/cambios/blob/main/CLAUDE.md) — Kernel technical reference and contributor conventions.
