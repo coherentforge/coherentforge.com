@@ -1,3 +1,17 @@
+/**
+ * Pulse propagation — perceptual scaffolding, not physics.
+ *
+ * Pulses are {x, y, r}; r += 1.8 per frame (a counter masquerading as a wave).
+ * Nodes in the 12px annulus |d - r| < 6 count as "hit." Simultaneous hits
+ * accumulate via n.light = max(light, hits), so 1-, 2-, 3-wave coincidences
+ * push light to 1, 2, 3. Decay is light *= 0.965 per frame
+ * (half-life ~330ms at 60fps). Every visual — alpha, radius, halo at v>1.1,
+ * color shifting accent → white past v=2.5 — is derived from `light` alone.
+ *
+ * The eye reads simultaneous distance-band hits as a ring, the ring's
+ * expansion as propagation, geometric intersections as significant moments.
+ * No wave equations involved.
+ */
 (function(){
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const el = document.getElementById('hero-viz');
@@ -95,17 +109,21 @@
       if (v > 0.04) {
         const alpha = Math.min(1, v * 0.4);
         const radius = 1.1 + Math.max(0, v - 1) * 0.75;
+        const t = Math.min(1, Math.max(0, v - 2.75));
+        const r = (ACCENT_RGB[0] + (255 - ACCENT_RGB[0]) * t) | 0;
+        const g = (ACCENT_RGB[1] + (255 - ACCENT_RGB[1]) * t) | 0;
+        const b = (ACCENT_RGB[2] + (255 - ACCENT_RGB[2]) * t) | 0;
         if (v > 1.1) {
           const haloR = radius * 6;
           const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, haloR);
-          grad.addColorStop(0, `rgba(${ACCENT_RGB[0]},${ACCENT_RGB[1]},${ACCENT_RGB[2]},${(v - 1) * 0.18})`);
-          grad.addColorStop(1, `rgba(${ACCENT_RGB[0]},${ACCENT_RGB[1]},${ACCENT_RGB[2]},0)`);
+          grad.addColorStop(0, `rgba(${r},${g},${b},${(v - 1) * 0.18})`);
+          grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
           ctx.fillStyle = grad;
           ctx.beginPath();
           ctx.arc(n.x, n.y, haloR, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = `rgba(${ACCENT_RGB[0]},${ACCENT_RGB[1]},${ACCENT_RGB[2]},${alpha})`;
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
         ctx.beginPath();
         ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
         ctx.fill();
