@@ -42,11 +42,11 @@
       </div>
       <div class="pill">
         <div class="pill-label">Security</div>
-        <div class="pill-value">Capability-based IPC. Zero-trust interceptor. Signed ELF loading. W^X enforcement. Every message carries an unforgeable sender principal.</div>
+        <div class="pill-value">Capability-based IPC. Zero-trust interceptor. Signed ELF loading. W^X enforcement. Full-disk encryption. Every message carries an unforgeable sender principal.</div>
       </div>
       <div class="pill">
         <div class="pill-label">Identity</div>
-        <div class="pill-value">Every process has an Ed25519 identity enforced by the kernel — no usernames, no passwords, no central authority. Hardware key support is in progress.</div>
+        <div class="pill-value">Every process has an Ed25519 identity enforced by the kernel — no usernames, no passwords, no central authority. A userspace multi-Principal vault binds and signs per Principal; <code>did:key</code> interop; a PIV / smart-card key backend is underway.</div>
       </div>
       <div class="pill">
         <div class="pill-label">Access</div>
@@ -54,7 +54,7 @@
       </div>
       <div class="pill">
         <div class="pill-label">Storage</div>
-        <div class="pill-value">Content-addressed ObjectStore. Blake3 hashing. Ed25519 signatures on every object. Persistent on virtio-blk, survives reboot.</div>
+        <div class="pill-value">Content-addressed ObjectStore — Blake3 hashing, Ed25519 signatures on every object, persistent on virtio-blk, survives reboot. Full-disk encryption beneath it; a POSIX file model is taking shape alongside signed CambiObjects.</div>
       </div>
       <div class="pill">
         <div class="pill-label">Networking</div>
