@@ -1,0 +1,15 @@
+{{- /*
+  Markdown link render hook: make root-absolute links honor the baseURL subpath.
+
+  The site is served under a path (baseURL ".../cambios"), but content links are
+  written root-absolute (/docs/..., /adr/...). Hugo emits those verbatim, so they
+  bypass the subpath and 404. relURL only prepends the subpath for a NON-rooted
+  path (a leading slash is left untouched), so strip the slash first:
+  "/adr/x" -> "adr/x" | relURL -> "/cambios/adr/x". External (http/https),
+  protocol-relative (//), anchor (#), and relative links pass through unchanged.
+*/ -}}
+{{- $dest := .Destination -}}
+{{- if and (hasPrefix $dest "/") (not (hasPrefix $dest "//")) -}}
+  {{- $dest = $dest | strings.TrimPrefix "/" | relURL -}}
+{{- end -}}
+<a href="{{ $dest | safeURL }}"{{ with .Title }} title="{{ . }}"{{ end }}>{{ .Text | safeHTML }}</a>
