@@ -18,10 +18,17 @@
 
     <div class="hero-quote">Computer security requirements have shifted more since the advent of <a href="https://www.anthropic.com/glasswing">Mythos</a> than in the thirty years before it. Legacy OSes — built on permissive substrates with telemetry-as-product baked in — can't catch up by patching. CambiOS starts from scratch and gives you back your machine, to the extent that we can.</div>
 
+    <div class="hero-provenance">
+      <p class="hero-provenance-label">Provenance</p>
+      <p>Generative AI has broken "seeing is believing." We can't tell you what's real. No one can, from the pixels alone. What CambiOS inherently tells you, unforgeably, is <strong>who or what made it</strong>: every message and file is stamped, in the kernel, with the identity of its author — a person, a device, or an AI agent, each a principal. The stamp can't be forged, and it can't be peeled off without breaking the object.</p>
+      <p>Knowing <em>who</em> claims authorship is a part of this problem the machine <em>can</em> settle. The decision to <em>trust</em> them stays yours — as it always has. Reputations are built between people, over time, and a name you can't fake is what lets one mean something. That web of who-vouches-for-whom is a userspace concern, peer to peer, with no authority in the middle — which is exactly where the kernel's refusal to judge identity leaves it.</p>
+    </div>
+
     <p class="hero-intent">This is what we've built so far.</p>
 
     <div class="status-bar">
       <div class="status-item"><span class="status-dot green"></span> 892 unit tests passing</div>
+      <div class="status-item"><span class="status-dot green"></span> 48 Kani proofs passing</div>
       <div class="status-item"><span class="status-dot green"></span> x86_64 boots in QEMU</div>
       <div class="status-item"><span class="status-dot green"></span> AArch64 boots in QEMU</div>
       <div class="status-item"><span class="status-dot green"></span> RISC-V boots in QEMU</div>
@@ -55,7 +62,7 @@
       </div>
       <div class="pill">
         <div class="pill-label">Verification</div>
-        <div class="pill-value">47 Kani proof harnesses across 6 proof crates — memory allocator, ELF parser, capability manager, user-slice validators, and DTB parser. Proof authoring found and fixed 10 real integer-overflow sites in production code. The proofs formally back the capability-soundness claim. <a href="{{ .Site.Params.repo }}/blob/main/verification/CLAIMS.md">CLAIMS.md</a> tracks the gap between proven and aspirational.</div>
+        <div class="pill-value">48 Kani proof harnesses across 6 proof crates — memory allocator, ELF parser, capability manager, user-slice validators, and DTB parser. Proof authoring found and fixed 10 real integer-overflow sites in production code. The proofs formally back the capability-soundness claim. <a href="{{ .Site.Params.repo }}/blob/main/verification/CLAIMS.md">CLAIMS.md</a> tracks the gap between proven and aspirational.</div>
       </div>
       <div class="pill">
         <div class="pill-label">Platforms</div>

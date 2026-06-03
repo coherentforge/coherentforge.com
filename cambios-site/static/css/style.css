@@ -261,6 +261,36 @@ nav.main-nav a.active {
   max-width: 38rem;
 }
 
+.hero-provenance {
+  max-width: 40rem;
+  margin: var(--sp-12) 0;
+  padding-top: var(--sp-8);
+  border-top: 1px solid var(--border);
+}
+
+.hero-provenance-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 var(--sp-3);
+}
+
+.hero-provenance p:not(.hero-provenance-label) {
+  font-size: var(--fs-base);
+  color: var(--fg-0);
+  line-height: var(--lh-body);
+  margin: 0;
+}
+
+.hero-provenance p + p:not(.hero-provenance-label) {
+  margin-top: var(--sp-4);
+}
+
+.hero-provenance strong { color: var(--fg-0); font-weight: 600; }
+.hero-provenance em { color: var(--fg-0); font-style: italic; }
+
 .hero-constraints {
   list-style: none;
   padding: 0;
