@@ -1,1 +1,10 @@
 *.code-workspace
+
+# Local WIP / scratch — kept on disk, not committed (`git add -f` to override).
+# Deferred 3D-orbits hero viz prototype:
+layouts/partials/atom-hero.html
+static/js/atom-hero.js
+static/js/three.min.js
+# Logo-concept exploration + working notes:
+static/demos/logo-concepts.html
+drafts/

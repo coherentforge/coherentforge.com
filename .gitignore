@@ -11,3 +11,7 @@ resources/
 .idea/
 *.swp
 *~
+
+# Deferred homepage 3D-orbits viz prototype (kept on disk, not committed;
+# `git add -f` when it's ready to wire into the site)
+cambios_atom_3d_fixed_orbits.html

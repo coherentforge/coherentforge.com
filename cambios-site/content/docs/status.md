@@ -216,5 +216,6 @@ Major categories (approximate; the breakdown drifts faster than the total):
 - [Security](/docs/security/) — enforcement status (security subset)
 - [Governance](/docs/governance/) — funding posture, deployment tiers, scope boundaries
 - [Identity](/docs/identity/) — identity architecture (Phases 0-7)
+- [Identity Synthesis](/docs/identity-synthesis/) — interop with decentralized-identity ecosystems (First Person Network, ToIP, KERI); translation, not adoption
 - [ADRs](/adr/) — site-hosted decision records (000-033)
 - [`coherentforge/cambios` on GitHub](https://github.com/coherentforge/cambios) — kernel source, full ADR set (000-033), `verification/CLAIMS.md`, `STATUS.md`, `CLAUDE.md`
