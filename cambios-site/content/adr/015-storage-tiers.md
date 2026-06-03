@@ -1,16 +1,17 @@
 ---
 title: "Storage Tiers and the Commitment Ladder"
 adr_num: "015"
-status: "Proposed"
-date_proposed: "2026-04-16"
+status: "Stale — superseded by [ADR-028](028-three-storage-models.md) (2026-05-11)"
+date_proposed: "2026-04-16 (frozen as historical record)"
 weight: 15
 ---
 
-- **Status:** Proposed
-- **Date:** 2026-04-16
+- **Status:** Stale — superseded by [ADR-028](/adr/028-three-storage-models/) (2026-05-11)
+- **Date:** 2026-04-16 (frozen as historical record)
 - **Depends on:** [ADR-003](/adr/003-content-addressed-storage/) (Content-Addressed Storage + Identity), [ADR-004](/adr/004-cryptographic-integrity/) (Cryptographic Integrity), [ADR-010](/adr/010-persistent-object-store/) (Persistent ObjectStore On-Disk Format)
 - **Related:** [ADR-000](/adr/000-zta-and-cap/) (Zero-Trust Architecture), [ADR-007](/adr/007-capability-revocation/) (audit state lives in the private tier established here)
-- **Supersedes:** N/A. Extends the storage model around CambiObject; does not retire it.
+- **Supersedes:** N/A.
+- **Superseded by:** [ADR-028](/adr/028-three-storage-models/). The commitment-ladder framing (Temp → Private → Public CambiObject, share-triggered promotion, `SYS_OBJ_SAVE_PRIVATE`) was superseded by ADR-028's three co-equal storage models (CambiObject, POSIX file, Stream) with three seam syscalls (CAMBIO, REGALO, STREAM). The promotion ladder is incompatible with ADR-028's "no implicit promotion, no DEMOTE, three distinct handle types" posture. Body retained below as the historical record of the rejected approach.
 
 ## Problem
 

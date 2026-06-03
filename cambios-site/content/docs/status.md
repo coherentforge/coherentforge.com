@@ -1,7 +1,7 @@
 ---
 title: "Implementation Status"
 url: /docs/status/
-last_synced_to_kernel: 2026-05-04
+last_synced_to_kernel: 2026-05-29
 ---
 
 # CambiOS Implementation Status
@@ -10,31 +10,34 @@ last_synced_to_kernel: 2026-05-04
 >
 > "Is X done yet?" — read here. "Should X be done a certain way?" — read the linked design doc.
 
-*Last synced to code: 2026-05-04.*
+*Last synced to code: 2026-05-29.*
 
 ---
 
 ## At a glance
 
 - **Tri-arch first-class.** Clean release build on `x86_64`, `aarch64`, and `riscv64gc`. All three boot in QEMU to a `cambios>` shell prompt. `make check-all` is the permanent regression gate.
-- **561 host unit tests passing** on `x86_64-apple-darwin`. Numbers live in code, not prose — `make stats` for the current count.
+- **892 host unit tests passing** on `x86_64-apple-darwin`. Numbers live in code, not prose — `make stats` for the current count.
 - **Security model live end-to-end.** Cryptographic identity, signed-ELF verification, capability-gated IPC, content-addressed ObjectStore, audit ring, kernel identity gate, userspace `recv_verified`.
 - **GUI stack live on x86_64 + AArch64.** scanout-virtio-gpu drives QEMU virtio-gpu-pci; compositor composites; virtio-input forwards HID keyboard and pointer events into the focused window. Default GUI boot module is `pong` on x86_64 (continuous-motion 1-player vs AI), `worm` on AArch64; `tree` (Minesweeper) stays buildable for regression.
 - **Persistent storage live.** virtio-blk + disk-backed ObjectStore + `arcobj` shell CLI; objects survive reboot.
 - **Bare metal.** USB boot tooling complete; not yet exercised on target hardware (Dell Precision 3630).
-- **Formal verification.** 47 Kani harnesses across 6 proof crates (BuddyAllocator, ELF parser, FrameAllocator, CapabilityManager, UserSlice, DTB parser). Proof authoring has fixed real overflow bugs in shipped code. The honest gap between proven and aspirational claims lives in [verification/CLAIMS.md](https://github.com/coherentforge/cambios/blob/main/verification/CLAIMS.md).
+- **Formal verification.** 48 Kani harnesses across 6 proof crates (BuddyAllocator, ELF parser, FrameAllocator, CapabilityManager, UserSlice, DTB parser). Proof authoring has fixed real overflow bugs in shipped code. The honest gap between proven and aspirational claims lives in [verification/CLAIMS.md](https://github.com/coherentforge/cambios/blob/main/verification/CLAIMS.md).
 - **Repository.** Public on GitHub at [coherentforge/cambios](https://github.com/coherentforge/cambios) — AGPL-3.0-or-later on kernel + services + apps, MPL-2.0 on `user/libsys/`.
 
 ---
 
 ## Recent landings
 
-Newest first. Rolling ~3-week window; older items rotate out (the [git log](https://github.com/coherentforge/cambios/commits/main) has the full history).
+Newest first; older items rotate out as newer work lands (the [git log](https://github.com/coherentforge/cambios/commits/main) has the full history).
 
+- **2026-05-29** — Multi-Principal vault Phase 1C complete ([ADR-033](/adr/033-multi-principal-vault/)): all three primitives — `bind_for_spawn`, `sign_with`, `decrypt_with` — shipped and exercised by two real consumers, fde-mount's full-disk-encryption unlock and fs-service's signed writes. Keys resolve through the vault rather than being touched directly; the kernel still binds one Principal per process.
+- **2026-05-25** — USB host stack (xHCI) bring-up: host-controller reset/run, port enumeration, Address Device, descriptor reads, SET_CONFIGURATION, and first bulk transfers end-to-end under QEMU. The CCID smart-card layer split into a dedicated `user/ccid` boot module — groundwork for hardware-token (PIV / YubiKey) access on real hardware.
+- **2026-05-20** — Full-disk-encryption path: a software-emulated PIV backend behind a `dev-piv` build feature, the `fde-mount` boot module, a multi-slot encrypted-volume header parser, and a `format-volume` host tool. FDE unlock runs end-to-end in the dev-piv smoke test.
+- **2026-05-16** — Storage architecture decided across [ADR-028](/adr/028-three-storage-models/)–[ADR-032](/adr/032-full-disk-encryption-below-substrate/): three storage models under kernel-API type discipline, with the POSIX file model ([ADR-029](/adr/029-posix-file-storage-model/)) and the signed-CambiObject model as two metadata layers over one [unified substrate](/adr/031-unified-storage-substrate/), and full-disk encryption below it. POSIX backend substrate plus first handlers (create / open / stat / acl) landed.
+- **2026-05-07** — Service clusters ([ADR-027](/adr/027-service-clusters/)) implemented end-to-end — previously designed-only. Kernel ABI (`SYS_CLUSTER_*`), a `ClusterManager`, and the rendering-limb cluster (compositor + scanout + virtio-input as one revocable trust topology).
 - **2026-05-04** — [verification/CLAIMS.md](https://github.com/coherentforge/cambios/blob/main/verification/CLAIMS.md) is the honest gap-map between "what runs" and "what's proven." 14 rows spanning all four Status values (Proven / Tested / Asserted / Aspirational) and three claim Layers (behavior / guarantee / meaning). Layer-3 meaning-claims like "Zero-trust" and "AI watches but does not decide" are explicitly marked Aspirational by their nature, and the doc says so.
 - **2026-05-04** — DTB parser Kani proofs (5 harnesses) covering header validation, byte-extraction safety, wire-format contracts, and bounded callbacks. A real Kani finding fixed: `be_u32_at` / `be_u64_at` claimed to "return 0 on overrun" but actually panicked with arithmetic overflow at extreme offsets. Both helpers now use `checked_add`. ADR-013's "no panics in the boot path" claim now has provable backing for the byte-extraction layer.
-- **2026-05-03** — Multi-Principal vault Phase 1C: a userspace service extending the key-store with kernel consultation at process spawn. Plurality lives in userspace; the kernel keeps `Principal` singular and atomic. AI sandboxes are per-Principal.
-- **2026-05-03** — [ADR-027](https://github.com/coherentforge/cambios/blob/main/docs/adr/027-service-clusters.md): service clusters as identity-bound channel meshes. Designed only — kernel-ABI cluster handle and lock-hierarchy placement spelled out; no implementation yet. First target is the rendering limb (compositor + scanout + virtio-input + libgui clients).
 - **2026-05-02** — [ADR-026](https://github.com/coherentforge/cambios/blob/main/docs/adr/026-identity-transcription-at-the-kernel-ring.md): the "transcribe-not-interpret" identity invariant. Codifies a rule the kernel was already following implicitly — read a Principal AID, copy it onto outgoing IPC and authored objects; never branch on the AID *value* to make a policy decision. AI-watches-flags-sandboxes-but-does-not-write-policy is now a load-bearing principle, not just a slogan.
 - **2026-05-01** — [ADR-025](https://github.com/coherentforge/cambios/blob/main/docs/adr/025-principal-as-aid.md): Principal is now a 32-byte AID with first-class algorithm and hash bytes. Today's instantiation is `Ed25519 + blake3(pubkey)`. Post-quantum migration to Dilithium is a code-only change — no wire-format rewrite.
 - **2026-04-27** — Wall-clock subsystem ([ADR-022](https://github.com/coherentforge/cambios/blob/main/docs/adr/022-wall-clock-time.md)): `SetWallclock` / `GetWallclock` syscalls with a `SetWallclock` capability gate. Identity-aware shell prompt (`did:key:z6Mk…@user>`).
@@ -72,21 +75,24 @@ Newest first. Rolling ~3-week window; older items rotate out (the [git log](http
 | Audit consumer capability + `audit-tail` | Done | x/a/r | [ADR-023](https://github.com/coherentforge/cambios/blob/main/docs/adr/023-audit-consumer-capability.md) |
 | Policy service (per-process syscall allowlists) | Done | x/a/r | [ADR-006](/adr/006-policy-service/) |
 | Cryptographic identity (Principal as 32-byte AID, transcribe-not-interpret) | Done | x/a/r | [identity.md](https://github.com/coherentforge/cambios/blob/main/docs/identity.md), [ADR-025](https://github.com/coherentforge/cambios/blob/main/docs/adr/025-principal-as-aid.md), [ADR-026](https://github.com/coherentforge/cambios/blob/main/docs/adr/026-identity-transcription-at-the-kernel-ring.md) |
-| Multi-Principal vault service | Done (userspace plurality; kernel `Principal` stays singular) | x/a/r | [identity.md Phase 1C](https://github.com/coherentforge/cambios/blob/main/docs/identity.md), [ADR-026](https://github.com/coherentforge/cambios/blob/main/docs/adr/026-identity-transcription-at-the-kernel-ring.md) |
+| Multi-Principal vault service | Done — Phase 1C complete: `bind_for_spawn` / `sign_with` / `decrypt_with`, with fde-mount + fs-service as live consumers (kernel `Principal` stays singular) | x/a/r | [ADR-033](/adr/033-multi-principal-vault/), [identity.md](https://github.com/coherentforge/cambios/blob/main/docs/identity.md) |
 | `did:key` encoder + decoder | Done (encoding only, not full DID resolution) | x/a/r | [identity.md](https://github.com/coherentforge/cambios/blob/main/docs/identity.md) Phase 4 |
 | Signed ELF loading (ARCSIG trailer, Ed25519) | Done | x/a/r | [ADR-004](/adr/004-cryptographic-integrity/) |
 | Content-addressed ObjectStore (RAM fallback) | Done | x/a/r | [ADR-003](/adr/003-content-addressed-storage/) |
 | Persistent ObjectStore (disk) | Done | x (via virtio-blk) | [ADR-010](/adr/010-persistent-object-store/) |
 | BlockDevice abstraction | Done | x/a/r | [ADR-010](/adr/010-persistent-object-store/) |
 | FS service (endpoint 16, ObjectStore gateway) | Done | x/a/r | — |
-| Key-store service (endpoint 17) | Done (degraded mode — no runtime YubiKey yet) | x/a/r | — |
+| Key-store service (endpoint 17) | Done — software PIV backend under `dev-piv`; vault primitives live; real hardware-token path pending USB HID | x/a/r | — |
 | Virtio-blk driver | Done | x/a/r | [ADR-010](/adr/010-persistent-object-store/) |
 | Virtio-net driver (modern PCI on x86; legacy MMIO on a/r; NTP demo live) | Done | x/a/r | — |
 | Intel I219-LM driver (bare-metal target) | Scaffolded, untested on hardware | x | — |
 | UDP/IP stack (ARP/IPv4/UDP + NTP demo) | Done | x/a | — |
 | Shell (incl. `arcobj` CLI) | Done | x/a/r | — |
 | Wall-clock subsystem (`SetWallclock` / `GetWallclock` + cap) | Done | x/a/r | [ADR-022](https://github.com/coherentforge/cambios/blob/main/docs/adr/022-wall-clock-time.md) |
-| Service clusters | Designed; no implementation yet | — | [ADR-027](https://github.com/coherentforge/cambios/blob/main/docs/adr/027-service-clusters.md) |
+| Service clusters | Done — kernel ABI (`SYS_CLUSTER_*`) + `ClusterManager` + rendering-limb wiring, end-to-end | x | [ADR-027](/adr/027-service-clusters/) |
+| Full-disk encryption (PIV-backed) | Done — software PIV backend under `dev-piv`; `fde-mount` unlock; multi-slot volume headers; `format-volume` tool | x | [ADR-032](/adr/032-full-disk-encryption-below-substrate/) |
+| USB host stack (xHCI + CCID) | In progress — enumeration, addressing, control + bulk transfers; CCID layer split to `user/ccid` | x | — |
+| POSIX file storage backend | Substrate done; first handlers (create / open / stat / acl) landed | x | [ADR-028](/adr/028-three-storage-models/), [ADR-029](/adr/029-posix-file-storage-model/), [ADR-031](/adr/031-unified-storage-substrate/) |
 | PCI bus discovery (port-IO on x86, ECAM MMIO on a/r) | Done | x/a/r | — |
 | Bootloader abstraction (`BootInfo` + `src/boot/`) | Done | x/a/r | [ADR-011](/adr/011-graphics-architecture/) |
 | Compositor (Scanout-2/3 + Input-1 event routing) | Done | x/a | [ADR-014](/adr/014-compositor-scanout/) |
@@ -100,7 +106,7 @@ Newest first. Rolling ~3-week window; older items rotate out (the [git log](http
 | TLB shootdown | Done (x86 vector-IPI / ARM TLBI broadcast / RISC-V SBI IPI) | x/a/r | — |
 | Process lifecycle cleanup (caps, channels, VMAs, page-table frames, heap) | Done; kernel stack free deferred (bounded leak) | x/a/r | — |
 | USB boot tooling (`make img-usb` + `make usb DEVICE=...`) | Done; untested on target hardware | x | — |
-| Formal verification (Kani) | 47 harnesses across 6 proof crates; fixed real overflow bugs in shipped code; gap-map in [CLAIMS.md](https://github.com/coherentforge/cambios/blob/main/verification/CLAIMS.md) | — | [ADR-000 § Divergence](/adr/000-zta-and-cap/) |
+| Formal verification (Kani) | 48 harnesses across 6 proof crates; fixed real overflow bugs in shipped code; gap-map in [CLAIMS.md](https://github.com/coherentforge/cambios/blob/main/verification/CLAIMS.md) | — | [ADR-000 § Divergence](/adr/000-zta-and-cap/) |
 | AArch64 SMP timer on AP | **Gap**: PPI 30 not firing on the second CPU under QEMU `virt`. Single-CPU works. | a | — |
 | DHCP client | Paused | — | — |
 | DNS / TCP / Yggdrasil mesh / TLS / VFS / USB HID / DID resolution / identity revocation | Planned | — | various |
@@ -161,7 +167,7 @@ Parity-target with x86_64 / AArch64. All phases landed as of 2026-04-19. Source:
 
 ## Test coverage
 
-Total: **561** on `x86_64-apple-darwin`. Run `RUST_MIN_STACK=8388608 cargo test --lib --target x86_64-apple-darwin`, or `make stats` for the live number.
+Total: **892** on `x86_64-apple-darwin`. Run `RUST_MIN_STACK=8388608 cargo test --lib --target x86_64-apple-darwin`, or `make stats` for the live number.
 
 Major categories (approximate; the breakdown drifts faster than the total):
 
@@ -210,5 +216,5 @@ Major categories (approximate; the breakdown drifts faster than the total):
 - [Security](/docs/security/) — enforcement status (security subset)
 - [Governance](/docs/governance/) — funding posture, deployment tiers, scope boundaries
 - [Identity](/docs/identity/) — identity architecture (Phases 0-7)
-- [ADRs](/adr/) — site-hosted decision records (000-015)
-- [`coherentforge/cambios` on GitHub](https://github.com/coherentforge/cambios) — kernel source, full ADR set (000-027), `verification/CLAIMS.md`, `STATUS.md`, `CLAUDE.md`
+- [ADRs](/adr/) — site-hosted decision records (000-033)
+- [`coherentforge/cambios` on GitHub](https://github.com/coherentforge/cambios) — kernel source, full ADR set (000-033), `verification/CLAIMS.md`, `STATUS.md`, `CLAUDE.md`
