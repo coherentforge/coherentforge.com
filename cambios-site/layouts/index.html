@@ -27,18 +27,18 @@
     <p class="hero-intent">This is what we've built so far.</p>
 
     <div class="status-bar">
-      <div class="status-item"><span class="status-dot green"></span> 892 unit tests passing</div>
+      <div class="status-item"><span class="status-dot green"></span> 935 unit tests passing</div>
       <div class="status-item"><span class="status-dot green"></span> 48 Kani proofs passing</div>
-      <div class="status-item"><span class="status-dot green"></span> x86_64 boots in QEMU</div>
+      <div class="status-item"><span class="status-dot green"></span> x86_64 boots on bare metal</div>
       <div class="status-item"><span class="status-dot green"></span> AArch64 boots in QEMU</div>
       <div class="status-item"><span class="status-dot green"></span> RISC-V boots in QEMU</div>
-      <div class="status-item"><span class="status-dot blue"></span> Bare-metal tooling ready</div>
+      <div class="status-item"><span class="status-dot blue"></span> Bare-metal NIC + NVMe next</div>
     </div>
 
     <div class="pill-grid">
       <div class="pill">
         <div class="pill-label">Kernel</div>
-        <div class="pill-value">Microkernel in Rust (no_std). Five jobs: scheduling, memory, IPC, capabilities, interrupts. Everything else is user-space.</div>
+        <div class="pill-value">Microkernel in Rust (no_std). Five jobs: scheduling, memory, IPC, capabilities, interrupts. Everything else is user-space, started by a signed boot manifest — the kernel auto-starts nothing.</div>
       </div>
       <div class="pill">
         <div class="pill-label">Security</div>
@@ -46,7 +46,7 @@
       </div>
       <div class="pill">
         <div class="pill-label">Identity</div>
-        <div class="pill-value">Every process has an Ed25519 identity enforced by the kernel — no usernames, no passwords, no central authority. A userspace multi-Principal vault binds and signs per Principal; <code>did:key</code> interop; a PIV / smart-card key backend is underway.</div>
+        <div class="pill-value">Every process has an Ed25519 identity, bound by the kernel at spawn — no usernames, no passwords, no central authority. A userspace multi-Principal vault binds and signs per Principal; <code>did:key</code> interop; a PIV / smart-card key path rides the USB CCID pipe.</div>
       </div>
       <div class="pill">
         <div class="pill-label">Access</div>
@@ -58,7 +58,7 @@
       </div>
       <div class="pill">
         <div class="pill-label">Networking</div>
-        <div class="pill-value">UDP/IP stack with ARP and NTP demo. Virtio-net and Intel I219-LM drivers built; bare-metal bring-up pending. Identity-routed overlay network on the roadmap.</div>
+        <div class="pill-value">UDP/IP stack with ARP and NTP demo. Virtio-net live; the Intel I219-LM is enumerated on real hardware and its driver is next up. Identity-routed overlay network on the roadmap.</div>
       </div>
       <div class="pill">
         <div class="pill-label">Verification</div>
@@ -66,7 +66,7 @@
       </div>
       <div class="pill">
         <div class="pill-label">Platforms</div>
-        <div class="pill-value">x86_64 (SMP, 2 CPUs; compositor + GPU scanout + input routing live). AArch64 (SMP, GICv3). RISC-V (SMP, Sv48 paging). All three boot to a shell with full service parity.</div>
+        <div class="pill-value">x86_64 (SMP; boots two real machines to the shell, and a 12-core Dell Precision 3630 all the way to the GUI terminal with a USB keyboard). AArch64 (SMP, GICv3; GUI in QEMU). RISC-V (SMP, Sv48 paging). All three boot to a shell under init-supervised boot.</div>
       </div>
     </div>
   </div>

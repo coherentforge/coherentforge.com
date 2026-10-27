@@ -60,7 +60,7 @@ Reboots are an admission that the system cannot maintain its own integrity acros
 
 ### 8. Platform Is an Implementation Detail
 
-CambiOS runs in QEMU on x86_64, AArch64, and RISC-V. The architecture abstraction boundary is sharp and explicit. Portable code never touches hardware directly. Architecture-specific code lives behind a defined interface. Adding a new platform means implementing that interface, not rewriting the OS.
+CambiOS runs on x86_64, AArch64, and RISC-V under QEMU, and boots real x86_64 hardware. The architecture abstraction boundary is sharp and explicit. Portable code never touches hardware directly. Architecture-specific code lives behind a defined interface. Adding a new platform means implementing that interface, not rewriting the OS.
 
 ---
 
@@ -417,15 +417,15 @@ Beyond the headline commitments on the homepage (no telemetry, no backdoors, the
 
 ### What Exists Today (Summary)
 
-The microkernel is real and running on x86_64, AArch64, and — in active bring-up — RISC-V. It is not a design document. It is working code: 540 unit tests pass on host and integration testing runs in QEMU. The headline:
+The microkernel is real and running on x86_64, AArch64, and RISC-V. It is not a design document. It is working code: 935 unit tests pass on host, integration testing runs in QEMU on all three architectures, and two x86_64 machines boot it from a USB stick. The headline:
 
 - **Kernel fundamentals** are complete: preemptive SMP scheduling with per-CPU priority-band schedulers, load balancing and task migration, per-process page tables with W^X enforcement, capability-checked IPC with zero-trust interception.
-- **Phase 3 architectural substrate** has landed: shared-memory IPC channels for bulk data, capability revocation with full process-exit cleanup, and per-CPU lock-free audit rings that stream kernel enforcement decisions to user-space. The policy service (3.4) is the remaining piece before the v1 networking stack sits on top of it.
-- **Identity is hardware-backed.** A YubiKey-derived Ed25519 bootstrap principal is compiled into the kernel; no secret key lives in kernel memory. Boot modules are signed at build time and verified before execution. IPC messages carry unforgeable sender principals stamped by the kernel. The syscall dispatcher structurally rejects anonymous processes beyond a minimal survival surface.
+- **The architectural substrate** has landed: shared-memory IPC channels for bulk data, capability revocation governed by a `revoke` right, per-CPU lock-free audit rings that stream kernel enforcement decisions to user-space, and a user-space policy service holding per-process syscall allowlists. Boot is init-supervised: a signed manifest is the only thing that starts anything, and every service runs under its own derived identity.
+- **Identity is hardware-backed.** A YubiKey-derived Ed25519 bootstrap principal is compiled into the kernel; no secret key lives in kernel memory. Boot modules are signed at build time and verified before execution. The kernel binds each process its Principal at spawn, from the signed manifest, and stamps it unforgeably onto every IPC message. A user-space multi-Principal vault signs and decrypts on behalf of Principals, and full-disk encryption unlocks through it.
 - **Storage is persistent.** Content-addressed objects (Blake3 hashes, Ed25519 signatures, per-principal ownership) live on a disk-backed ObjectStore over a user-space virtio-blk driver. `arcobj put/get/list/delete` round-trips across reboots on QEMU.
 - **Networking** has a working vertical slice: user-space virtio-net driver and stateless UDP/IP stack demonstrated against an external NTP server through QEMU's SLIRP network. An Intel I219-LM driver is scaffolded for the bare-metal NIC target. Identity-routed overlay networking is on the roadmap.
-- **Bare-metal tooling is ready.** `make img-usb` builds a GPT-partitioned UEFI image and `make usb` writes it safely to a device with confirmation. Not yet tested on the target hardware (Dell Precision 3630).
-- **Formal verification has started.** 29 Kani proof harnesses cover the memory allocator, ELF parser, and capability manager. Authoring them surfaced and fixed 8 real integer-overflow sites in production code.
+- **It runs on real hardware.** Two x86_64 machines boot from a USB stick to the shell prompt. On the documented target, a 12-core Dell Precision 3630, the GUI terminal comes up on the monitor and a USB keyboard types into it — no serial cable. NIC and NVMe bring-up on that machine are next.
+- **Formal verification is live.** 48 Kani proof harnesses across 6 proof crates cover the memory allocators, ELF parser, capability manager, user-slice validators, and DTB parser. Authoring them surfaced and fixed 10 real integer-overflow sites in production code.
 
 For the canonical, kept-current breakdown — every subsystem, every phase, every test count, every known issue — see **[STATUS.md](/docs/status/)**. This document is for *intent*, not *current state*.
 
