@@ -3,7 +3,9 @@ title: "Why Not Just Use X?"
 url: /docs/why-not/
 ---
 
-CambiOS is not a rejection of any of these systems, it exists because of them. Every project below taught us something, and several of them taught us how to build the parts of CambiOS that work today. After thinking about each one, none of them checked all the boxes.
+CambiOS is not a rejection of any of these systems, it exists because of them. Every project below taught us something, and several of them taught us how to build the parts of CambiOS that work today.
+
+> Computer security requirements have shifted more since the advent of [Mythos](https://www.anthropic.com/glasswing) than in the thirty years before it. Legacy OSes — built on permissive substrates with telemetry-as-product baked in — can't catch up by patching. CambiOS starts from scratch and gives you back your machine, to the extent that we can. After thinking about each one, none of them checked all the boxes.
 
 ## The five constraints CambiOS holds together
 

@@ -716,3 +716,19 @@ nav.main-nav a.active {
   .adr-item { flex-wrap: wrap; }
   .footer-inner { flex-direction: column; text-align: center; }
 }
+
+/* homepage lede + "where we are today" block (2026-10 homepage restructure) */
+.hero-lede {
+  font-size: var(--fs-lg, 1.2rem);
+  color: var(--fg-0);
+  max-width: 40rem;
+  margin-top: var(--sp-12);
+  line-height: var(--lh-body);
+}
+.hero-lede em { font-style: italic; color: var(--accent); }
+.hero-lede + .hero-intent { margin-top: var(--sp-8); color: var(--fg-1); }
+.hero-aside { font-size: var(--fs-sm); color: var(--fg-2); margin-top: var(--sp-4); }
+.hero-aside a { color: var(--fg-1); }
+.hero-today { margin-bottom: var(--sp-6); }
+.hero-today + .status-bar { margin-top: 0; }
+.hero-caveat { margin-top: var(--sp-2); }

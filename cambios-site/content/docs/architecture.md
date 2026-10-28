@@ -66,9 +66,31 @@ CambiOS runs on x86_64, AArch64, and RISC-V under QEMU, and boots real x86_64 ha
 
 ## Architecture
 
-CambiOS is a layered system with hard isolation boundaries between layers. Communication between layers happens exclusively through message-passing IPC, mediated by capabilities. The [homepage](/) carries the target-architecture diagram, annotated with what's running today and what's still on the roadmap.
+CambiOS is a layered system with hard isolation boundaries between layers. Communication between layers happens exclusively through message-passing IPC, mediated by capabilities. This is the target stack; items marked *(roadmap)* are designed but not yet built, and everything else is running today.
 
-Every layer above the microkernel runs as a user-space process. Every call between layers is a capability-checked IPC message. There are no exceptions.
+```
++============================================================+
+|                      Applications                          |
+|  Native CambiOS apps  |  Win32 / POSIX compat (roadmap)    |
++============================================================+
+|                    System Services                         |
+|  Init | Shell | Compositor | Policy service | Update (roadmap) |
++============================================================+
+|                    OS Services                             |
+|  Network stack | Graphics | Device drivers | VFS (roadmap) |
++============================================================+
+|                    Core Services                           |
+|  Identity + Vault | Audit | AI engine (roadmap) | Social (roadmap) |
++============================================================+
+|                    Microkernel                             |
+|  Scheduling | Memory | IPC | Capabilities | Interrupts     |
++============================================================+
+|                    Hardware                                |
+|  x86_64  |  AArch64  |  RISC-V  |  (future)              |
++============================================================+
+```
+
+Every box above the microkernel is an isolated user-space process, started by `init` from a signed boot manifest. Every message between them is capability-checked. A buggy filesystem service can't take down the kernel. A compromised network driver can't read another process's memory. The isolation is enforced by the architecture; there is no policy layer to misconfigure, and no exceptions.
 
 ---
 
@@ -382,10 +404,9 @@ AArch64 boots on QEMU `virt` (GICv3 required) and runs preemptive scheduling wit
 
 For the up-to-date list of remaining gaps (device IRQ routing on AArch64, SMP timer on AP, bare-metal testing) see [STATUS.md](/docs/status/).
 
-### In Progress: RISC-V (riscv64gc)
+### Current: RISC-V (riscv64gc)
 
-A third architecture backend is in active bring-up. As of Phase R-2, CambiOS boots under OpenSBI, trampolines into a higher-half kernel via Sv48 paging, parses the device tree for memory layout, and has a working frame allocator and kernel heap with `Box::new` round-tripping end-to-end in QEMU `virt`. The bootloader is OpenSBI plus a custom S-mode `_start` — Limine doesn't ship on RISC-V. Interrupts and preemptive scheduling, user space, SMP, and full service parity are staged in subsequent phases. The target is a third first-class platform, not a hobby port.
-
+The third architecture backend reached service-level parity in April 2026 and boots under init-supervised boot (an 11-service wave) since September. OpenSBI hands off to a higher-half kernel via Sv48 paging; the device tree supplies the memory layout; SMP comes up through SBI HSM with cross-hart TLB shootdown over SBI IPI; virtio-mmio carries the device transports. The backend is covered by the same `make check-all` gate as the other two, and its DTB parser carries five Kani harnesses. Phase history is in [ADR-013](/adr/013-riscv64-support/).
 ### Future Considerations
 
 CambiOS's architecture does not assume any specific ISA. The platform abstraction is a defined interface; new targets are added by implementing that interface, not by rewriting the OS.
@@ -431,7 +452,7 @@ For the canonical, kept-current breakdown — every subsystem, every phase, ever
 
 ### What Comes Next
 
-The v1 target is an interactive, network-capable, identity-rooted OS running on real hardware with persistent storage. Shell, persistent storage, and the `arcobj` CLI are done; next are the policy service, bare-metal NIC bring-up on the Dell 3630, DHCP/DNS, a TCP stack, and then identity-routed mesh networking. The full dependency-ordered list lives in [STATUS.md § v1 Roadmap progress](/docs/status/#v1-roadmap-progress) so the order doesn't drift across documents. The architectural substrate that the networking items sit on — the bulk-data IPC channel primitive, externalized policy decisions, capability revocation, and audit telemetry — is described in [ADR-005](/adr/005-ipc-primitives/), [ADR-006](/adr/006-policy-service/), and [ADR-007](/adr/007-capability-revocation/).
+The v1 target is an interactive, network-capable, identity-rooted OS running on real hardware with persistent storage. The machine boots and takes input; the policy service, persistent storage, the vault, and the native app framework are done. Next on hardware are the Intel I219-LM NIC and NVMe storage on the Dell 3630, then DHCP/DNS, a TCP stack, and identity-routed mesh networking above them. The full dependency-ordered list lives in [STATUS.md § v1 target](/docs/status/#v1-target) so the order doesn't drift across documents.
 
 ### What We Don't Know Yet
 
@@ -440,7 +461,6 @@ Some parts of this vision are clear in intent but unclear in implementation. Tha
 - **How large can the on-CPU AI models be before they impact latency?** We need benchmarks. The answer determines how much of the security AI runs inline versus deferred.
 - **What is the right granularity for the overlay network?** Per-connection? Per-session? Per-application? This depends on performance characteristics we haven't measured yet.
 - **How do we handle the cold-start problem for behavioral AI?** A freshly installed system has no behavioral profiles. What does the security AI do on day one? Conservative defaults, probably, with a learning period. But the details matter.
-- **What does the native application framework look like?** CambiOS needs a way for developers to build native apps. The kernel provides IPC and capabilities. What goes on top of that — the equivalent of a GUI toolkit, a standard library, a package format — is not yet designed.
 
 These are open questions, not blockers. The microkernel doesn't need to answer them to keep making progress. The architecture is designed to accommodate answers we haven't found yet.
 

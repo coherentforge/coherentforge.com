@@ -4,19 +4,19 @@
   <div class="hero-content">
     <h1>A secure bridge from<br>human consciousness<br>to the <span class="accent">electron</span>.</h1>
 
-    <p class="hero-intent">That's the destination. Today, no shipping general-purpose OS holds together all five of the constraints below. Each was built for a different problem and made different tradeoffs. CambiOS is the bet that the next era needs all five — and that retrofitting won't get us there.</p>
+    <p class="hero-lede">CambiOS is a desktop operating system we're building from scratch, meant for the machine in front of you — the one that runs Windows or macOS today. Your identity is a key you create, and no one else manages. Every file and message is indelibly stamped with who — or what — made it. CambiOS never phones home, because it <em>is</em> home.</p>
+
+    <p class="hero-intent">No shipping general-purpose OS holds all five of the following together. Each was built for a different problem and made different tradeoffs. CambiOS is the bet that the next era needs all five, and that retrofitting won't get there.</p>
 
     <ul class="hero-constraints">
-      <li><strong>Architecturally enforced security.</strong> A five-job microkernel; everything else in user space; capabilities at every IPC boundary. Security as structure, not policy on top of a permissive substrate.</li>
-      <li><strong>Sovereign identity.</strong> Cryptographic keys, kernel-enforced. No vendor account between you and your machine. No password to phish.</li>
-      <li><strong>Sovereign data.</strong> Content-addressed storage, owned by the principal that created it. No service in the middle scanning, indexing, or reporting.</li>
-      <li><strong>Sovereign network.</strong> An identity-routed overlay where the destination is a public key. Infrastructure can't surveil or redirect what it can't decrypt. <em>(Designed; UDP/IP slice runs today.)</em></li>
-      <li><strong>AI as infrastructure, optional by tier.</strong> Local models supervise verification, behavioral monitoring, and compatibility translation. The kernel runs without any of it on the embedded tier. <em>(Architectural; AI subsystem on roadmap.)</em></li>
+      <li><strong>Architecturally enforced security.</strong> A five-job microkernel, everything else in user space, a capability check at every boundary.</li>
+      <li><strong>Sovereign identity.</strong> Your identity is a key the kernel enforces. No vendor account between you and your machine, no password to phish.</li>
+      <li><strong>Sovereign data.</strong> Content-addressed storage owned by whoever made it. No service in the middle scanning, indexing, or reporting.</li>
+      <li><strong>Sovereign network.</strong> An identity-routed overlay where the destination is a public key, so infrastructure can't surveil or redirect what it can't decrypt.</li>
+      <li><strong>AI as infrastructure, optional by tier.</strong> Local models that verify, watch, and translate — and a kernel that runs without any of it.</li>
     </ul>
 
-    <p class="hero-intent hero-caveat">All five live in software. The privileged silicon underneath — Intel ME, AMD PSP, Apple Secure Enclave, the TPM stack — is a separate fight, and not one CambiOS pretends to win. For now, the software side has to stop adding to the problem. Change starts with awareness and we'll cross that bridge when we get there.</p>
-
-    <div class="hero-quote">Computer security requirements have shifted more since the advent of <a href="https://www.anthropic.com/glasswing">Mythos</a> than in the thirty years before it. Legacy OSes — built on permissive substrates with telemetry-as-product baked in — can't catch up by patching. CambiOS starts from scratch and gives you back your machine, to the extent that we can.</div>
+    <p class="hero-intent hero-aside">How each of these compares to what exists is in <a href="{{ "docs/why-not/" | relURL }}">why not just use X?</a></p>
 
     <div class="hero-provenance">
       <p class="hero-provenance-label">Provenance</p>
@@ -24,7 +24,16 @@
       <p>Knowing <em>who</em> claims authorship is a part of this problem the machine <em>can</em> settle. The decision to <em>trust</em> them stays yours — as it always has. Reputations are built between people, over time, and a name you can't fake is what lets one mean something. That web of who-vouches-for-whom is a userspace concern, peer to peer, with no authority in the middle — which is exactly where the kernel's refusal to judge identity leaves it.</p>
     </div>
 
-    <p class="hero-intent">This is what we've built so far.</p>
+    <div class="hero-provenance">
+      <p class="hero-provenance-label">Social networking</p>
+      <p>The point of a name you can't fake is the people on the other end of it. Your identity starts as a key only you hold. It gains weight through the people who know you: when two people who have actually met vouch for each other, each signs a record of that relationship, and both keep it. Enough of those, overlapping, and who you are is anchored by who knows you rather than by a platform's records — a web that is hard to counterfeit, because every strand in it was signed by someone already inside it.</p>
+      <p>Communities form the same way: a group is the people whose vouching connects, and membership is something you can prove, not something a server grants. No platform sits in the middle to rank these relationships, rent them back to you, or revoke them. The decentralized-identity world is converging on the same shapes — verifiable relationship credentials, trust graphs, verifiable trust communities — and CambiOS is built to speak to that work without being owned by any one ecosystem (<a href="{{ "docs/identity-synthesis/" | relURL }}">Identity Synthesis</a>). This layer is designed, not yet built; the identity and provenance beneath it run today.</p>
+    </div>
+
+    <div class="hero-provenance hero-today">
+      <p class="hero-provenance-label">Where we are today</p>
+      <p>This is working code, not a design document. Two x86_64 machines boot it from a USB stick to the shell; a 12-core Dell Precision 3630 comes all the way up to a GUI terminal with a USB keyboard. It is not yet a desktop you can live in. Networking and NVMe storage on hardware are next, then the application layer. <a href="{{ "docs/status/" | relURL }}">Status</a> tracks every subsystem, every test count, and every known gap.</p>
+    </div>
 
     <div class="status-bar">
       <div class="status-item"><span class="status-dot green"></span> 935 unit tests passing</div>
@@ -37,75 +46,37 @@
 
     <div class="pill-grid">
       <div class="pill">
-        <div class="pill-label">Kernel</div>
-        <div class="pill-value">Microkernel in Rust (no_std). Five jobs: scheduling, memory, IPC, capabilities, interrupts. Everything else is user-space, started by a signed boot manifest — the kernel auto-starts nothing.</div>
+        <div class="pill-label">Runs on real hardware</div>
+        <div class="pill-value">Microkernel in Rust, every driver and service an isolated user-space process, started by a signed boot manifest. x86_64 on bare metal; AArch64 and RISC-V at full service parity under QEMU.</div>
       </div>
       <div class="pill">
-        <div class="pill-label">Security</div>
-        <div class="pill-value">Capability-based IPC. Zero-trust interceptor. Signed ELF loading. W^X enforcement. Full-disk encryption. Every message carries an unforgeable sender principal.</div>
+        <div class="pill-label">Identity and provenance</div>
+        <div class="pill-value">Every process gets an Ed25519 identity, bound by the kernel at spawn. Every message and object carries its author's unforgeable stamp. A user-space vault signs per Principal; smart-card keys ride the USB pipe.</div>
       </div>
       <div class="pill">
-        <div class="pill-label">Identity</div>
-        <div class="pill-value">Every process has an Ed25519 identity, bound by the kernel at spawn — no usernames, no passwords, no central authority. A userspace multi-Principal vault binds and signs per Principal; <code>did:key</code> interop; a PIV / smart-card key path rides the USB CCID pipe.</div>
+        <div class="pill-label">Storage and encryption</div>
+        <div class="pill-value">Content-addressed, signed objects that survive reboot, over full-disk encryption unlocked through the vault. A POSIX file model is taking shape alongside.</div>
       </div>
       <div class="pill">
-        <div class="pill-label">Access</div>
-        <div class="pill-value">Who you are and what you can do are separate concerns. The policy service enforces per-process syscall allowlists. Capabilities govern IPC. The audit ring logs every enforcement decision.</div>
-      </div>
-      <div class="pill">
-        <div class="pill-label">Storage</div>
-        <div class="pill-value">Content-addressed ObjectStore — Blake3 hashing, Ed25519 signatures on every object, persistent on virtio-blk, survives reboot. Full-disk encryption beneath it; a POSIX file model is taking shape alongside signed CambiObjects.</div>
-      </div>
-      <div class="pill">
-        <div class="pill-label">Networking</div>
-        <div class="pill-value">UDP/IP stack with ARP and NTP demo. Virtio-net live; the Intel I219-LM is enumerated on real hardware and its driver is next up. Identity-routed overlay network on the roadmap.</div>
-      </div>
-      <div class="pill">
-        <div class="pill-label">Verification</div>
-        <div class="pill-value">48 Kani proof harnesses across 6 proof crates — memory allocator, ELF parser, capability manager, user-slice validators, and DTB parser. Proof authoring found and fixed 10 real integer-overflow sites in production code. The proofs formally back the capability-soundness claim. <a href="{{ .Site.Params.repo }}/blob/main/verification/CLAIMS.md">CLAIMS.md</a> tracks the gap between proven and aspirational.</div>
-      </div>
-      <div class="pill">
-        <div class="pill-label">Platforms</div>
-        <div class="pill-value">x86_64 (SMP; boots two real machines to the shell, and a 12-core Dell Precision 3630 all the way to the GUI terminal with a USB keyboard). AArch64 (SMP, GICv3; GUI in QEMU). RISC-V (SMP, Sv48 paging). All three boot to a shell under init-supervised boot.</div>
+        <div class="pill-label">Verified where it counts</div>
+        <div class="pill-value">48 Kani proof harnesses across 6 crates back the allocators, ELF parser, capability manager, user-slice validators, and DTB parser. Writing them fixed 10 real overflow bugs. <a href="{{ .Site.Params.repo }}/blob/main/verification/CLAIMS.md">CLAIMS.md</a> tracks proven versus aspirational.</div>
       </div>
     </div>
+
+    <p class="hero-intent hero-caveat">All of this lives in software. The privileged silicon underneath — Intel ME, AMD PSP, Apple's Secure Enclave, the TPM stack — is a separate fight, and not one CambiOS pretends to win. For now, the software side has to stop adding to the problem. Change starts with awareness and we'll cross that bridge when we get there.</p>
   </div>
 </section>
 
 <section class="page-wrap">
   <div class="page-content">
-    <h2>Target Architecture</h2>
-    <p>The full intended stack. Items marked <em>(roadmap)</em> are designed but not yet built — everything else is running today.</p>
-    <div class="arch-diagram">
-+============================================================+
-|                      Applications                          |
-|  Native CambiOS apps  |  Win32 / POSIX compat (roadmap)    |
-+============================================================+
-|                    System Services                         |
-|  Shell | Compositor | Policy service | Update (roadmap)    |
-+============================================================+
-|                    OS Services                             |
-|  Network stack | Graphics | Device drivers | VFS (roadmap) |
-+============================================================+
-|                    Core Services                           |
-|  Identity | Audit | AI engine (roadmap) | Social (roadmap) |
-+============================================================+
-|                    Microkernel                             |
-|  Scheduling | Memory | IPC | Capabilities | Interrupts     |
-+============================================================+
-|                    Hardware                                |
-|  x86_64  |  AArch64  |  RISC-V  |  (future)              |
-+============================================================+</div>
-    <p>CambiOS boots, schedules, runs user-space services, signs and verifies binaries, and handles IPC -- with a real security model enforced at every boundary.</p>
-
-    <p>Every box above the microkernel is an isolated user-space process. Every message between them is capability-checked. A buggy filesystem service can't take down the kernel. A compromised network driver can't read another process's memory. The isolation is enforced by the architecture -- there's no policy layer to misconfigure.</p>
-    <p>The documentation is honest: <a href="{{ "docs/status/" | relURL }}">STATUS.md</a> lists what works and what doesn't, feature by feature. <a href="{{ "docs/assumptions/" | relURL }}">ASSUMPTIONS.md</a> catalogs every numeric bound in the codebase. <a href="{{ "adr/" | relURL }}">ADRs</a> record architecture decisions with rationale and rejected alternatives.</p>
-    <p>Read the <a href="{{ "docs/architecture/" | relURL }}">architecture document</a>. Read the <a href="{{ "manuals/" | relURL }}">manuals</a> -- they walk real things through the system. Read the <a href="{{ "docs/philosophy/" | relURL }}">philosophy</a> if you want to know why. Read <a href="{{ "docs/why-not/" | relURL }}">why not just use X?</a> if that's the first thing you wanted to ask.</p>
-
     <h2>Commitments</h2>
     <p><strong>No telemetry.</strong> No analytics, no phone-home, no usage reporting. Telemetry was never part of the design -- there's nothing to turn off.</p>
     <p><strong>No backdoors.</strong> No remote access mechanism that bypasses the capability model. No "emergency" channels. No "debug" overrides that work without the user's explicit action.</p>
     <p><strong>Your stack is yours.</strong> No DRM. No activation. No mandatory accounts. Secure boot protects your boot chain from tampering -- the signing keys are yours.</p>
+
+    <h2>Read on</h2>
+    <p>The <a href="{{ "docs/architecture/" | relURL }}">architecture document</a> is the long form: the stack, the threat model, and what we said no to. The <a href="{{ "manuals/" | relURL }}">manuals</a> walk real things through the system, one message or one signature at a time. The <a href="{{ "docs/philosophy/" | relURL }}">philosophy</a> is the why. <a href="{{ "docs/why-not/" | relURL }}">Why not just use X?</a> answers the first question most people ask.</p>
+    <p>The documentation is honest by construction: <a href="{{ "docs/status/" | relURL }}">Status</a> lists what works and what doesn't, feature by feature. <a href="{{ "docs/assumptions/" | relURL }}">Assumptions</a> catalogs every numeric bound in the codebase. <a href="{{ "adr/" | relURL }}">ADRs</a> record each architecture decision with its rationale and the alternatives rejected.</p>
   </div>
 </section>
 {{ end }}
